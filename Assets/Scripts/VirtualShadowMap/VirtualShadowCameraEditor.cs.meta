@@ -1,0 +1,12 @@
+fileFormatVersion: 2
+guid: 87843c389a0ae3e408cc7d13f671c8f2
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - m_DrawTile: {fileID: 4800000, guid: 8e0698b4276965d4cbcb2e1a35430a61, type: 3}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
