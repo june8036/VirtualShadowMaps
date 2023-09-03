@@ -326,14 +326,10 @@ namespace VirtualTexture
         public Bounds CalculateBoundingBox()
         {
             var regionRange = this.regionRange;
-            var min = new Vector3(regionRange.xMin, 0, regionRange.yMin);
-            var max = new Vector3(regionRange.xMax, 0, regionRange.yMax);
-
             var bounds = VirtualShadowMapsUtilities.CalculateBoundingBox(this.GetRenderers());
-            bounds.Encapsulate(min);
-            bounds.Encapsulate(max);
+            var worldSize = new Vector3(regionRange.size.x, bounds.size.y, regionRange.size.y);
 
-            return bounds;
+            return new Bounds(bounds.center, worldSize);
         }
 
 #if UNITY_EDITOR
@@ -371,6 +367,7 @@ namespace VirtualTexture
             {
                 if (shadowData != null)
                 {
+                    Gizmos.matrix = Matrix4x4.identity;
                     Gizmos.color = new Color(0.0f, 0.5f, 1.0f, 0.2f);
                     Gizmos.DrawCube(shadowData.bounds.center, shadowData.bounds.size);
                     Gizmos.color = new Color(0.0f, 0.5f, 1.0f, 0.5f);

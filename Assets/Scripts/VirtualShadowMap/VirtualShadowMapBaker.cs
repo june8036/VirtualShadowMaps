@@ -6,25 +6,55 @@ namespace VirtualTexture
 {
     public sealed class VirtualShadowMapBaker : IDisposable
     {
+        /// <summary>
+        /// 光源朝向的相机
+        /// </summary>
         private Camera m_Camera;
+
+        /// <summary>
+        /// 渲染的静态物体
+        /// </summary>
         private List<MeshRenderer> m_Renderers;
+
+        /// <summary>
+        /// 投影着色器
+        /// </summary>
         private Material m_Material;
+
+        /// <summary>
+        /// 世界包围体
+        /// </summary>
         private Bounds m_WorldBounds;
+
+        /// <summary>
+        /// 烘焙需要的数据
+        /// </summary>
         private VirtualShadowMaps m_VirtualShadowMaps;
 
+        /// <summary>
+        /// 渲染单个ShadowMap需要的纹理
+        /// </summary>
+		private RenderTexture m_CameraTexture;
+
+        /// <summary>
+        /// 渲染单个ShadowMap需要的投影矩阵
+        /// </summary>
         public Matrix4x4 lightProjecionMatrix;
 
         public VirtualShadowMapBaker(VirtualShadowMaps virtualShadowMaps)
         {
-            var bounds = virtualShadowMaps.CalculateBoundingBox();
-            var regionRange = virtualShadowMaps.regionRange;
-            var worldSize = new Vector3(regionRange.size.x, bounds.size.y, regionRange.size.y);
-
             m_Camera = virtualShadowMaps.GetCamera();
             m_Renderers = virtualShadowMaps.GetRenderers();
             m_Material = new Material(virtualShadowMaps.castShader);
-            m_WorldBounds = new Bounds(bounds.center, worldSize);
+            m_WorldBounds = virtualShadowMaps.CalculateBoundingBox();
             m_VirtualShadowMaps = virtualShadowMaps;
+
+            m_CameraTexture = new RenderTexture(virtualShadowMaps.maxResolution, virtualShadowMaps.maxResolution, 16, RenderTextureFormat.RGHalf);
+            m_CameraTexture.name = "StaticShadowMap";
+            m_CameraTexture.useMipMap = false;
+            m_CameraTexture.autoGenerateMips = false;
+            m_CameraTexture.filterMode = FilterMode.Point;
+            m_CameraTexture.wrapMode = TextureWrapMode.Clamp;
         }
 
         ~VirtualShadowMapBaker()
@@ -34,8 +64,6 @@ namespace VirtualTexture
 
         public RenderTexture Render(RequestPageData request)
         {
-            m_VirtualShadowMaps.CreateCameraTexture(RenderTextureFormat.RGHalf);
-
             var x = request.pageX;
             var y = request.pageY;
             var mipScale = request.size;
@@ -79,9 +107,7 @@ namespace VirtualTexture
             m_Camera.farClipPlane = clipOffset + obliqueBounds.size.y * Mathf.Clamp01(Vector3.Dot(-lightTransform.forward, obliqueNormal));
             m_Camera.projectionMatrix = m_Camera.CalculateObliqueMatrix(VirtualShadowMapsUtilities.CameraSpacePlane(m_Camera, obliquePosition, obliqueNormal, -1.0f));
 
-            var cameraTexture = m_VirtualShadowMaps.GetCameraTexture();
-
-            Graphics.SetRenderTarget(cameraTexture);
+            Graphics.SetRenderTarget(m_CameraTexture);
             GL.Clear(true, true, Color.black);
             GL.LoadIdentity();
             GL.LoadProjectionMatrix(m_Camera.projectionMatrix * m_Camera.worldToCameraMatrix);
@@ -102,12 +128,19 @@ namespace VirtualTexture
             var projection = GL.GetGPUProjectionMatrix(m_Camera.projectionMatrix, false);
             lightProjecionMatrix = VirtualShadowMapsUtilities.GetWorldToShadowMapSpaceMatrix(projection, m_Camera.worldToCameraMatrix);
 
-            return cameraTexture;
+            return m_CameraTexture;
         }
 
         public void Dispose()
         {
-            m_VirtualShadowMaps?.DestroyCameraTexture();
+            if (m_CameraTexture != null)
+            {
+                if (m_Camera != null)
+                    m_Camera.targetTexture = null;
+
+                m_CameraTexture.Release();
+                m_CameraTexture = null;
+            }
         }
     }
 }
