@@ -73,12 +73,12 @@ namespace VirtualTexture
             var compactBoundsInLightSpace = VirtualShadowMapsUtilities.CalclateFitScene(compactBounds, lightTransform.worldToLocalMatrix);
             var compactBoundsInLightSpaceLocalPosition = new Vector3(compactBoundsInLightSpace.center.x, compactBoundsInLightSpace.center.y, compactBoundsInLightSpace.min.z - 0.05f);
             var compactPosition = new Vector3(compactBounds.center.x, compactBounds.max.y, compactBounds.center.z);
-            var compactNormal = new Vector3(0.0f, 1.0f, 0.0f);
+            var compactNormal = Vector3.up;
 
             m_Camera.transform.localPosition = compactBoundsInLightSpaceLocalPosition + lightTransform.worldToLocalMatrix.MultiplyPoint(lightTransform.position);
             m_Camera.orthographicSize = boundsInLightSpaceOrthographicSize;
             m_Camera.nearClipPlane = 0.05f;
-            m_Camera.farClipPlane = 0.05f + compactBoundsInLightSpace.size.z;
+            m_Camera.farClipPlane = 0.05f + compactBounds.size.y;
             m_Camera.projectionMatrix = m_Camera.CalculateObliqueMatrix(VirtualShadowMapsUtilities.CameraSpacePlane(m_Camera, compactPosition, compactNormal, -1.0f));
 
             var cameraTexture = m_VirtualShadowMaps.GetCameraTexture();
