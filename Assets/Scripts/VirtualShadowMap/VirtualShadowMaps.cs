@@ -176,14 +176,7 @@ namespace VirtualTexture
 
         public void OnDestroy()
         {
-            if (m_CameraTexture)
-            {
-                if (m_Camera != null)
-                    m_Camera.targetTexture = null;
-
-                m_CameraTexture.Release();
-                DestroyImmediate(m_CameraTexture);
-            }
+            DestroyCameraTexture();
         }
 
         public void Reset()
@@ -215,7 +208,7 @@ namespace VirtualTexture
         {
             m_CameraGO = new GameObject("", typeof(Camera));
             m_CameraGO.name = "VirtualShadowCamera" + m_CameraGO.GetInstanceID().ToString();
-            m_CameraGO.hideFlags = HideFlags.DontSave;
+            m_CameraGO.hideFlags = HideFlags.HideAndDontSave;
             m_CameraGO.transform.parent = this.transform;
 
             m_Camera = m_CameraGO.GetComponent<Camera>();
@@ -276,6 +269,20 @@ namespace VirtualTexture
             }
 
             m_Camera.targetTexture = m_CameraTexture;
+        }
+
+        public void DestroyCameraTexture()
+        {
+            if (m_CameraTexture)
+            {
+                if (m_Camera != null)
+                    m_Camera.targetTexture = null;
+
+                m_CameraTexture.Release();
+                DestroyImmediate(m_CameraTexture);
+
+                m_CameraTexture = null;
+            }
         }
 
         public RenderTexture GetCameraTexture()

@@ -8,7 +8,7 @@ using UnityEditor;
 
 namespace VirtualTexture
 {
-    public class VirtualShadowData : ScriptableObject
+    public sealed class VirtualShadowData : ScriptableObject
     {
         public static int s_SplitBlockSize = 64;
 

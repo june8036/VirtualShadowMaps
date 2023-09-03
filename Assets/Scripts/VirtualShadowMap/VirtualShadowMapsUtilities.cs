@@ -58,9 +58,8 @@ namespace VirtualTexture
 
         public static Vector4 CameraSpacePlane(Camera cam, Vector3 pos, Vector3 normal, float sideSign)
         {
-            Vector3 offsetPos = pos + normal;
             Matrix4x4 m = cam.worldToCameraMatrix;
-            Vector3 cpos = m.MultiplyPoint(offsetPos);
+            Vector3 cpos = m.MultiplyPoint(pos);
             Vector3 cnormal = m.MultiplyVector(normal).normalized * sideSign;
             return new Vector4(cnormal.x, cnormal.y, cnormal.z, -Vector3.Dot(cpos, cnormal));
         }
