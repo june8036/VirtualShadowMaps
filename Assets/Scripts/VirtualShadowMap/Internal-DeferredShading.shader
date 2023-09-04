@@ -45,12 +45,12 @@ half ShadowDeferredComputeShadow(float3 wpos, float fadeDist, float2 uv, float3 
     half shadowMaskAttenuation = UnityDeferredSampleShadowMask(uv);
     half realtimeShadowAttenuation = UnityDeferredSampleRealtimeShadow(fade, wpos, uv);
 
-#   if defined(_VIRTUAL_SHADOW_MAPS)
+#   ifdef _VIRTUAL_SHADOW_MAPS
     float3 shadowCoord = GetVirtualShadowTexcoord(wpos, normalWorld);
-    float shadowAttenuation = SampleVirtualShadowMap_PCF5x5(float4(shadowCoord, 0), 0);
-    shadowMaskAttenuation = min(shadowMaskAttenuation, shadowAttenuation);
+    float virtualShadow = SampleVirtualShadowMap_PCF5x5(float4(shadowCoord, 0), 0);
+    shadowMaskAttenuation = min(shadowMaskAttenuation, virtualShadow);
 #if  defined(SHADOWS_SCREEN)
-    realtimeShadowAttenuation = min(realtimeShadowAttenuation, shadowAttenuation);
+    realtimeShadowAttenuation = lerp(min(realtimeShadowAttenuation, virtualShadow), realtimeShadowAttenuation, _VirtualShadowBiasParams.z);
 #endif
 #endif
 

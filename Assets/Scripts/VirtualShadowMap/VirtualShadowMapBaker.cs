@@ -87,6 +87,7 @@ namespace VirtualTexture
             var boundsInLightSpaceLocalPosition = new Vector3(boundsInLightSpace.center.x, boundsInLightSpace.center.y, boundsInLightSpace.min.z - clipOffset);
 
             m_Camera.transform.localPosition = boundsInLightSpaceLocalPosition + lightTransform.worldToLocalMatrix.MultiplyPoint(lightTransform.position);
+            m_Camera.aspect = 1.0f;
             m_Camera.orthographicSize = boundsInLightSpaceOrthographicSize;
             m_Camera.nearClipPlane = clipOffset;
             m_Camera.farClipPlane = clipOffset + boundsInLightSpace.size.z;
@@ -98,13 +99,14 @@ namespace VirtualTexture
 
             var obliqueNormal = Vector3.up;
             var obliquePosition = new Vector3(obliqueBounds.center.x, obliqueBounds.max.y, obliqueBounds.center.z) + obliqueNormal * clipOffset;
+            var obliqueSlope = 1 - Mathf.Clamp01(Vector3.Dot(-lightTransform.forward, obliqueNormal));
             var obliqueBoundsInLightSpace = VirtualShadowMapsUtilities.CalclateFitScene(obliqueBounds, lightTransform.worldToLocalMatrix);
             var obliqueBoundsInLightSpaceLocalPosition = new Vector3(obliqueBoundsInLightSpace.center.x, obliqueBoundsInLightSpace.center.y, obliqueBoundsInLightSpace.min.z);
 
-            m_Camera.transform.localPosition = obliqueBoundsInLightSpaceLocalPosition + lightTransform.worldToLocalMatrix.MultiplyPoint(lightTransform.position);
+            m_Camera.transform.localPosition = obliqueBoundsInLightSpaceLocalPosition + lightTransform.worldToLocalMatrix.MultiplyPoint(lightTransform.position - lightTransform.forward * (obliqueBounds.size.y * obliqueSlope));
             m_Camera.orthographicSize = boundsInLightSpaceOrthographicSize;
             m_Camera.nearClipPlane = clipOffset;
-            m_Camera.farClipPlane = clipOffset + obliqueBounds.size.y * Mathf.Clamp01(Vector3.Dot(-lightTransform.forward, obliqueNormal));
+            m_Camera.farClipPlane = clipOffset + obliqueBounds.size.y;
             m_Camera.projectionMatrix = m_Camera.CalculateObliqueMatrix(VirtualShadowMapsUtilities.CameraSpacePlane(m_Camera, obliquePosition, obliqueNormal, -1.0f));
 
             Graphics.SetRenderTarget(m_CameraTexture);
@@ -120,6 +122,8 @@ namespace VirtualTexture
             {
                 if (GeometryUtility.TestPlanesAABB(planes, it.bounds))
                 {
+                    m_Material.CopyPropertiesFromMaterial(it.sharedMaterial);
+
                     if (it.TryGetComponent<MeshFilter>(out var meshFilter))
                         Graphics.DrawMeshNow(meshFilter.sharedMesh, it.localToWorldMatrix);
                 }

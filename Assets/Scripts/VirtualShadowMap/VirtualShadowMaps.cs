@@ -313,7 +313,7 @@ namespace VirtualTexture
                     {
                         if (renderer.TryGetComponent<MeshFilter>(out var meshFilter))
                         {
-                            if (meshFilter.sharedMesh != null)
+                            if (meshFilter.sharedMesh != null && renderer.sharedMaterial != null)
                                 renderers.Add(renderer);
                         }
                     }

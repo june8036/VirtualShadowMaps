@@ -118,12 +118,6 @@ namespace VirtualTexture
         public float regionChangeDistance { get => m_VirtualShadowMaps.regionSize * ScaleModeExtensions.ToFloat(m_RegionChangeScale); }
 
         /// <summary>
-        /// 单个Tile的尺寸.
-        /// </summary>
-        [SerializeField]
-        private int m_TileSize = 1024;
-
-        /// <summary>
         /// Tile池.
         /// </summary>
         [SerializeField]
@@ -188,7 +182,6 @@ namespace VirtualTexture
 
         public void Reset()
         {
-            this.m_TileSize = 1024;
             this.m_TilePool = 64;
             this.maxPageRequestLimit = 1;
         }
@@ -215,8 +208,9 @@ namespace VirtualTexture
 
                 var orthographicSize = Mathf.Max(m_BoundsInLightSpace[0].extents.x, m_BoundsInLightSpace[0].extents.y);
                 var biasScale = VirtualShadowMapsUtilities.CalculateBiasScale(orthographicSize, m_VirtualTexture.tileSize);
+                var distanceShadowMask = QualitySettings.shadowmaskMode == ShadowmaskMode.DistanceShadowmask ? true : false;
 
-                m_CameraCommandBuffer.SetGlobalVector("_VirtualShadowBiasParams", new Vector4(m_VirtualShadowMaps.bias * biasScale, m_VirtualShadowMaps.normalBias * biasScale * 1.414f, 0, 0));
+                m_CameraCommandBuffer.SetGlobalVector("_VirtualShadowBiasParams", new Vector4(m_VirtualShadowMaps.bias * biasScale, m_VirtualShadowMaps.normalBias * biasScale * 1.414f, distanceShadowMask? 1: 0, 0));
                 m_CameraCommandBuffer.SetGlobalVector("_VirtualShadowRegionParams", new Vector4(m_RegionRange.x, m_RegionRange.y, 1.0f / m_RegionRange.width, 1.0f / m_RegionRange.height));
                 m_CameraCommandBuffer.SetGlobalVector("_VirtualShadowPageParams", new Vector4(m_VirtualTexture.pageSize, 1.0f / m_VirtualTexture.pageSize, m_VirtualTexture.maxPageLevel, 0));
                 m_CameraCommandBuffer.SetGlobalVector("_VirtualShadowTileParams", new Vector4(m_VirtualTexture.tileSize, m_VirtualTexture.tilingCount, m_VirtualTexture.textireSize, 0));
@@ -377,7 +371,6 @@ namespace VirtualTexture
                                     if (this.OnBeginTileLoading(req, tile, handle.Result))
                                     {
                                         m_VirtualTexture.ActivatePage(tile, page);
-                                        m_CacheTextures.TryAdd(req, handle.Result);
                                     }
                                 }
                             }
