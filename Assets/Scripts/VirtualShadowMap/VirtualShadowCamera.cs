@@ -339,12 +339,12 @@ namespace VirtualTexture
                     for (int x = 0; x < pageSize; x++)
                     {
                         var thisPos = new Vector3(m_RegionRange.xMin + (x + 0.5f) * cellSize, 0, posY);
-                        var bound = new Bounds(thisPos, new Vector3(cellSize, cellSize, cellSize));
+                        var estimate = Vector3.SqrMagnitude(thisPos - m_CameraTransform.position) / cellSize2;
 
-                        if (GeometryUtility.TestPlanesAABB(m_CullingPlanes, bound))
+                        if (estimate < levelOfDetail)
                         {
-                            var estimate = Vector3.SqrMagnitude(thisPos - m_CameraTransform.position) / cellSize2;
-                            if (estimate < levelOfDetail)
+                            var bound = new Bounds(thisPos, new Vector3(cellSize, cellSize, cellSize));
+                            if (GeometryUtility.TestPlanesAABB(m_CullingPlanes, bound))
                                 m_VirtualTexture.LoadPage(x, y, level);
                         }
                     }
