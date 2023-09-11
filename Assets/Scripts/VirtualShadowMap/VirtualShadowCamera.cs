@@ -330,17 +330,20 @@ namespace VirtualTexture
                 var mipScale = 1 << level;
                 var pageSize = m_VirtualTexture.pageSize / mipScale;
                 var cellSize = m_VirtualShadowMaps.regionSize / m_VirtualTexture.pageSize * mipScale;
+                var cellSize2 = cellSize * cellSize;
 
                 for (int y = 0; y < pageSize; y++)
                 {
+                    var posY = m_RegionRange.yMin + (y + 0.5f) * cellSize;
+
                     for (int x = 0; x < pageSize; x++)
                     {
-                        var thisPos = new Vector3(m_RegionRange.xMin + (x + 0.5f) * cellSize, 0, m_RegionRange.yMin + (y + 0.5f) * cellSize);
+                        var thisPos = new Vector3(m_RegionRange.xMin + (x + 0.5f) * cellSize, 0, posY);
                         var bound = new Bounds(thisPos, new Vector3(cellSize, cellSize, cellSize));
 
                         if (GeometryUtility.TestPlanesAABB(m_CullingPlanes, bound))
                         {
-                            var estimate = Vector3.SqrMagnitude(thisPos - m_CameraTransform.position) / (cellSize * cellSize);
+                            var estimate = Vector3.SqrMagnitude(thisPos - m_CameraTransform.position) / cellSize2;
                             if (estimate < levelOfDetail)
                                 m_VirtualTexture.LoadPage(x, y, level);
                         }
