@@ -92,6 +92,28 @@ namespace VirtualTexture
             AssetDatabase.Refresh();
         }
 
+        public void TurnOnShadows()
+        {
+            var renderers = m_VirtualShadowMaps.GetRenderers();
+
+            foreach (var it in renderers)
+            {
+                if (it.shadowCastingMode == UnityEngine.Rendering.ShadowCastingMode.Off)
+                    it.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+            }
+        }
+
+        public void TurnOffShadows()
+        {
+            var renderers = m_VirtualShadowMaps.GetRenderers();
+
+            foreach (var it in renderers)
+            {
+                if (it.shadowCastingMode == UnityEngine.Rendering.ShadowCastingMode.On)
+                    it.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            }
+        }
+
         public override void OnInspectorGUI()
         {
             base.OnInspectorGUI();
@@ -99,6 +121,18 @@ namespace VirtualTexture
             if (GUILayout.Button("Generate Shadow Maps"))
             {
                 this.GenerateShadowMaps();
+            }
+
+            GUILayout.Space(10);
+
+            if (GUILayout.Button("Turn On Shadows (Ignore ShadowOnly)"))
+            {
+                this.TurnOnShadows();
+            }
+
+            if (GUILayout.Button("Turn Off Shadows (Ignore ShadowOnly)"))
+            {
+                this.TurnOffShadows();
             }
 
             if (GUI.changed)

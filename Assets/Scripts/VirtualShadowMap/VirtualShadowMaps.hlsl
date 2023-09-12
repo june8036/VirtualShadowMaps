@@ -76,8 +76,8 @@ float3 GetVirtualShadowTexcoord(float3 worldPos, float3 normalWS)
 	float2 uv = ComputeLookupTexcoord(worldPos);
 	float4 page = SampleLookupPage(uv);
 
-	float scale = (1.0 - clamp(dot(normalWS, _WorldSpaceLightPos0.xyz), 0, 0.9f)) * page.w;
-	worldPos = worldPos + _WorldSpaceLightPos0.xyz * scale.xxx * _VirtualShadowBiasParams.x;
+	float scale = (1.0 - clamp(dot(normalWS, _WorldSpaceLightPos0.xyz), 0, 0.9f));
+	worldPos = worldPos + _WorldSpaceLightPos0.xyz * scale.xxx * _VirtualShadowBiasParams.x * page.w;
 	worldPos = worldPos + normalWS * scale.xxx * _VirtualShadowBiasParams.y;
 
 	float4 ndcpos = mul(_VirtualShadowMatrixs[GetPageIndex(page)], float4(worldPos, 1));

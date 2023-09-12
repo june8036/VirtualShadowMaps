@@ -302,11 +302,12 @@ namespace VirtualTexture
 
         public List<MeshRenderer> GetRenderers()
         {
+            var camera = GetCamera();
             var renderers = new List<MeshRenderer>();
 
             foreach (var renderer in GameObject.FindObjectsOfType<MeshRenderer>())
             {
-                var layerTest = ((1 << renderer.gameObject.layer) & m_Camera.cullingMask) > 0;
+                var layerTest = ((1 << renderer.gameObject.layer) & camera.cullingMask) > 0;
                 if (renderer.gameObject.isStatic && layerTest)
                 {
                     if (renderer.enabled)

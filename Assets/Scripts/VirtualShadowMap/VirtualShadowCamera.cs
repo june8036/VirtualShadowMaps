@@ -223,7 +223,7 @@ namespace VirtualTexture
 
                 this.UpdatePage();
 
-                this.UpdateJob();
+                this.UpdateJob(maxPageRequestLimit);
                 this.UpdateLookup();
             }
             else
@@ -280,15 +280,9 @@ namespace VirtualTexture
             m_VirtualTexture.LoadPageByLevel(m_VirtualTexture.maxPageLevel);
 
             this.UpdateBoundsInLightSpace();
-
-            var totalRequestCount = m_VirtualTexture.GetRequestCount();
-
-            for (var i = 0; i < totalRequestCount; i++)
-            {
-                var req = m_VirtualTexture.FirstRequest();
-                if (req != null)
-                    this.ProcessRequest(req, false);
-            }
+            this.UpdatePage();
+            this.UpdateJob(int.MaxValue, false);
+            this.UpdateLookup();
         }
 
         private void DestroyVirtualShadowMaps()
@@ -410,15 +404,17 @@ namespace VirtualTexture
             }
         }
 
-        private void UpdateJob()
+        private void UpdateJob(int num, bool async = true)
         {
+            var requestCount = Math.Min(num, m_VirtualTexture.GetRequestCount());
+
             m_VirtualTexture.SortRequest();
 
-            for (int i = 0; i < maxPageRequestLimit; i++)
+            for (int i = 0; i < requestCount; i++)
             {
                 var req = m_VirtualTexture.FirstRequest();
                 if (req != null)
-                    this.ProcessRequest(req);
+                    this.ProcessRequest(req, async);
             }
         }
 
