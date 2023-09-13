@@ -8,7 +8,7 @@ using UnityEditor;
 
 namespace VirtualTexture
 {
-    [ExecuteAlways]
+    [ExecuteInEditMode]
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Light))]
 	public class VirtualShadowMaps : MonoBehaviour
@@ -88,13 +88,6 @@ namespace VirtualTexture
         [SerializeField]
         public int maxResolution = 1024;
 
-#if UNITY_EDITOR
-        /// <summary>
-        /// 管理实例化的相机
-        /// </summary>
-        private List<Camera> m_EditorCameras = new List<Camera>();
-#endif
-
         /// <summary>
         /// Depth Bias
         /// </summary>
@@ -149,10 +142,15 @@ namespace VirtualTexture
             InitShadowCamera();
 
 #if UNITY_EDITOR
-            foreach (var cam in m_EditorCameras)
+            foreach (var cam in SceneView.GetAllSceneCameras())
             {
-                if (cam)
-                    cam.GetComponent<VirtualShadowCamera>().enabled = true;
+                if (cam.cameraType == CameraType.SceneView)
+                {
+                    if (cam.gameObject.TryGetComponent<VirtualShadowCamera>(out var virtualShadowCamera))
+                        virtualShadowCamera.enabled = true;
+                    else
+                        cam.gameObject.AddComponent<VirtualShadowCamera>();
+                }
             }
 #endif
 
@@ -164,10 +162,13 @@ namespace VirtualTexture
             DestroyShadowCamera();
 
 #if UNITY_EDITOR
-            foreach (var cam in m_EditorCameras)
+            foreach (var cam in SceneView.GetAllSceneCameras())
             {
-                if (cam)
-                    cam.GetComponent<VirtualShadowCamera>().enabled = false;
+                if (cam.cameraType == CameraType.SceneView)
+                {
+                    if (cam.gameObject.TryGetComponent<VirtualShadowCamera>(out var virtualShadowCamera))
+                        virtualShadowCamera.enabled = false;
+                }
             }
 #endif
 
@@ -342,10 +343,7 @@ namespace VirtualTexture
                 if (camera.cameraType == CameraType.SceneView)
                 {
                     if (!camera.TryGetComponent<VirtualShadowCamera>(out var virtualShadowCamera))
-                    {
                         camera.gameObject.AddComponent<VirtualShadowCamera>();
-                        m_EditorCameras.Add(camera);
-                    }
                 }
             }
         }
