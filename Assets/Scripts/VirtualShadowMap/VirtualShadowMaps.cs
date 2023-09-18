@@ -64,6 +64,11 @@ namespace VirtualTexture
         public Shader drawLookupShader;
 
         /// <summary>
+        /// 计算深度图的最小最大值
+        /// </summary>
+        public ComputeShader minMaxDepthShader;
+
+        /// <summary>
         /// 覆盖区域大小.
         /// </summary>
         [Space(10)]
@@ -204,6 +209,20 @@ namespace VirtualTexture
             EditorUtility.SetDirty(this);
 #endif
         }
+
+#if UNITY_EDITOR
+        public void Refresh()
+        {
+            foreach (var cam in SceneView.GetAllSceneCameras())
+            {
+                if (cam.cameraType == CameraType.SceneView)
+                {
+                    if (cam.gameObject.TryGetComponent<VirtualShadowCamera>(out var virtualShadowCamera))
+                        virtualShadowCamera.ResetShadowMaps();
+                }
+            }
+        }
+#endif
 
         private void InitShadowCamera()
         {

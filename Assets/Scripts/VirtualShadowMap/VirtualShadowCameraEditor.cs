@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using UnityEditor;
 using UnityEngine;
 
@@ -34,6 +35,11 @@ namespace VirtualTexture
                 this.Repaint();
             }
 
+            if (GUILayout.Button("Refresh"))
+            {
+                m_VirtualShadowMaps.ResetShadowMaps();
+            }
+
             if (GUI.changed)
             {
                 EditorUtility.SetDirty(target);
@@ -41,3 +47,4 @@ namespace VirtualTexture
         }
     }
 }
+#endif

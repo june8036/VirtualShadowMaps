@@ -32,9 +32,19 @@ namespace VirtualTexture
         private VirtualShadowMaps m_VirtualShadowMaps;
 
         /// <summary>
+        /// 计算MinMax的包围
+        /// </summary>
+        private ComputeBuffer m_DepthBuffer;
+
+        /// <summary>
         /// 渲染单个ShadowMap需要的纹理
         /// </summary>
-		private RenderTexture m_CameraTexture;
+		private RenderTexture m_DepthTextureRaw;
+
+        /// <summary>
+        /// 渲染单个ShadowMap需要的纹理
+        /// </summary>
+		private RenderTexture m_DepthTexture;
 
         /// <summary>
         /// 渲染单个ShadowMap需要的投影矩阵
@@ -49,12 +59,22 @@ namespace VirtualTexture
             m_WorldBounds = virtualShadowMaps.CalculateBoundingBox();
             m_VirtualShadowMaps = virtualShadowMaps;
 
-            m_CameraTexture = new RenderTexture(virtualShadowMaps.maxResolution, virtualShadowMaps.maxResolution, 16, RenderTextureFormat.RGHalf);
-            m_CameraTexture.name = "StaticShadowMap";
-            m_CameraTexture.useMipMap = false;
-            m_CameraTexture.autoGenerateMips = false;
-            m_CameraTexture.filterMode = FilterMode.Point;
-            m_CameraTexture.wrapMode = TextureWrapMode.Clamp;
+            m_DepthBuffer = new ComputeBuffer(16 * 16, sizeof(float) * 2);
+
+            m_DepthTextureRaw = new RenderTexture(virtualShadowMaps.maxResolution, virtualShadowMaps.maxResolution, 16, RenderTextureFormat.RGHalf);
+            m_DepthTextureRaw.name = "DepthMapRaw";
+            m_DepthTextureRaw.useMipMap = false;
+            m_DepthTextureRaw.autoGenerateMips = false;
+            m_DepthTextureRaw.filterMode = FilterMode.Point;
+            m_DepthTextureRaw.wrapMode = TextureWrapMode.Clamp;
+
+            m_DepthTexture = new RenderTexture(virtualShadowMaps.maxResolution, virtualShadowMaps.maxResolution, 16, RenderTextureFormat.RGHalf);
+            m_DepthTexture.name = "DepthMap";
+            m_DepthTexture.enableRandomWrite = true;
+            m_DepthTexture.useMipMap = false;
+            m_DepthTexture.autoGenerateMips = false;
+            m_DepthTexture.filterMode = FilterMode.Point;
+            m_DepthTexture.wrapMode = TextureWrapMode.Clamp;
         }
 
         ~VirtualShadowMapBaker()
@@ -109,7 +129,7 @@ namespace VirtualTexture
             m_Camera.farClipPlane = clipOffset + obliqueBounds.size.y;
             m_Camera.projectionMatrix = m_Camera.CalculateObliqueMatrix(VirtualShadowMapsUtilities.CameraSpacePlane(m_Camera, obliquePosition, obliqueNormal, -1.0f));
 
-            Graphics.SetRenderTarget(m_CameraTexture);
+            Graphics.SetRenderTarget(m_DepthTextureRaw);
             GL.Clear(true, true, Color.black);
             GL.LoadIdentity();
             GL.LoadProjectionMatrix(m_Camera.projectionMatrix * m_Camera.worldToCameraMatrix);
@@ -129,21 +149,32 @@ namespace VirtualTexture
                 }
             }
 
+            m_VirtualShadowMaps.minMaxDepthShader.SetTexture(0, "depthMap", m_DepthTexture);
+            m_VirtualShadowMaps.minMaxDepthShader.SetTexture(0, "depthMapRaw", m_DepthTextureRaw);
+            m_VirtualShadowMaps.minMaxDepthShader.SetBuffer(0, "minMaxDepthBuffer", m_DepthBuffer);
+            m_VirtualShadowMaps.minMaxDepthShader.Dispatch(0, 1, 1, 1);
+
             var projection = GL.GetGPUProjectionMatrix(m_Camera.projectionMatrix, false);
             lightProjecionMatrix = VirtualShadowMapsUtilities.GetWorldToShadowMapSpaceMatrix(projection, m_Camera.worldToCameraMatrix);
 
-            return m_CameraTexture;
+            return m_DepthTextureRaw;
         }
 
         public void Dispose()
         {
-            if (m_CameraTexture != null)
-            {
-                if (m_Camera != null)
-                    m_Camera.targetTexture = null;
+            if (m_Camera != null)
+                m_Camera.targetTexture = null;
 
-                m_CameraTexture.Release();
-                m_CameraTexture = null;
+            if (m_DepthTexture != null)
+            {
+                m_DepthTexture.Release();
+                m_DepthTexture = null;
+            }
+
+            if (m_DepthTextureRaw != null)
+            {
+                m_DepthTextureRaw.Release();
+                m_DepthTextureRaw = null;
             }
         }
     }

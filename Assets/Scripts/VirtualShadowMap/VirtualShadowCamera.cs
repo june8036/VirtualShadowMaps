@@ -187,6 +187,11 @@ namespace VirtualTexture
             this.maxPageRequestLimit = 1;
         }
 
+        public void ResetShadowMaps()
+        {
+            DestroyVirtualShadowMaps();
+        }
+
         public void Update()
         {
             var virtualShadowMaps = VirtualShadowManager.instance.First();

@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using System.IO;
 using UnityEditor;
 using UnityEngine;
@@ -88,6 +89,7 @@ namespace VirtualTexture
             m_VirtualShadowData.SaveAs(Path.Join(fileroot, sceneName));
 
             m_VirtualShadowMaps.shadowData = m_VirtualShadowData;
+            m_VirtualShadowMaps.Refresh();
 
             AssetDatabase.Refresh();
         }
@@ -142,3 +144,4 @@ namespace VirtualTexture
         }
     }
 }
+#endif
