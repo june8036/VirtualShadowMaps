@@ -64,11 +64,6 @@ namespace VirtualTexture
         public Shader drawLookupShader;
 
         /// <summary>
-        /// 计算深度图的最小最大值
-        /// </summary>
-        public ComputeShader minMaxDepthShader;
-
-        /// <summary>
         /// 覆盖区域大小.
         /// </summary>
         [Space(10)]

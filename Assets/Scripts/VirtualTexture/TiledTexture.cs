@@ -1,5 +1,6 @@
 ﻿using System;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace VirtualTexture
 {
@@ -118,6 +119,13 @@ namespace VirtualTexture
             var tileY = 1 - (tileRect.y + tileRect.height) / (float)textireSize * 2;
             var tileWidth = tileRect.width * 2 / (float)textireSize;
             var tileHeight = tileRect.height * 2 / (float)textireSize;
+
+            if (SystemInfo.graphicsDeviceType == GraphicsDeviceType.OpenGLCore ||
+                SystemInfo.graphicsDeviceType == GraphicsDeviceType.OpenGLES2 ||
+                SystemInfo.graphicsDeviceType == GraphicsDeviceType.OpenGLES3)
+            {
+                tileY = tileRect.y / (float)textireSize * 2 - 1;
+            }
 
             return Matrix4x4.TRS(new Vector3(tileX, tileY, 0), Quaternion.identity, new Vector3(tileWidth, tileHeight, 0));
         }

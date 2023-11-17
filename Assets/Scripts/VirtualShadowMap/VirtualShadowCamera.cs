@@ -283,8 +283,6 @@ namespace VirtualTexture
                 m_VirtualTexture = new VirtualTexture2D(m_VirtualShadowMaps.maxResolution, tilingCount, textureFormat, m_VirtualShadowMaps.pageSize, m_VirtualShadowMaps.maxMipLevel);
             }
 
-            m_VirtualTexture.LoadPageByLevel(m_VirtualTexture.maxPageLevel);
-
             this.UpdateBoundsInLightSpace();
             this.UpdatePage();
             this.UpdateJob(int.MaxValue, false);
@@ -487,10 +485,10 @@ namespace VirtualTexture
             quadVertexList.Add(new Vector3(1, 0, 0.1f));
             quadVertexList.Add(new Vector3(1, 1, 0.1f));
 
-            quadUVList.Add(new Vector2(0, 0));
             quadUVList.Add(new Vector2(0, 1));
-            quadUVList.Add(new Vector2(1, 1));
+            quadUVList.Add(new Vector2(0, 0));
             quadUVList.Add(new Vector2(1, 0));
+            quadUVList.Add(new Vector2(1, 1));
 
             quadTriangleList.Add(0);
             quadTriangleList.Add(1);
@@ -504,6 +502,12 @@ namespace VirtualTexture
             m_TileMesh.SetVertices(quadVertexList);
             m_TileMesh.SetUVs(0, quadUVList);
             m_TileMesh.SetTriangles(quadTriangleList, 0);
+        }
+
+        private void OnBeginCameraRendering(ScriptableRenderContext ctx, Camera camera)
+        {
+            if (m_Camera == camera)
+                ctx.ExecuteCommandBuffer(m_CameraCommandBuffer);
         }
 
         private bool OnBeginTileLoading(RequestPageData request, int tile, Texture2D texture)
@@ -546,8 +550,8 @@ namespace VirtualTexture
             shadowCamera.farClipPlane = 0.05f + m_BoundsInLightSpace[m_VirtualTexture.maxPageLevel].size.z;
             shadowCamera.Render();
 
-            var projection = GL.GetGPUProjectionMatrix(shadowCamera.projectionMatrix, false);
-            var lightProjecionMatrix = VirtualShadowMapsUtilities.GetWorldToShadowMapSpaceMatrix(projection, shadowCamera.worldToCameraMatrix);
+            var projection = GL.GetGPUProjectionMatrix(shadowCamera.projectionMatrix, false) * shadowCamera.worldToCameraMatrix;
+            var lightProjecionMatrix = VirtualShadowMapsUtilities.GetWorldToShadowMapSpaceMatrix(projection);
 
             m_LightProjecionMatrixs[tile] = lightProjecionMatrix;
 

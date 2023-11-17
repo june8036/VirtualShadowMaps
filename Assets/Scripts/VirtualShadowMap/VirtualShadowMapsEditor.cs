@@ -64,7 +64,7 @@ namespace VirtualTexture
                     var pageName = request.mipLevel + "-" + request.pageX + "-" + request.pageY;
                     var outpath = Path.Join(fileroot, sceneName, "ShadowTexBytes-" + pageName + ".exr");
 
-                    var shadowMap = baker.Render(request);
+                    var shadowMap = baker.Render(request.pageX, request.pageY, request.mipLevel);
                     SaveRenderTexture(shadowMap, outpath);
 
                     m_VirtualShadowData.SetMatrix(request, baker.lightProjecionMatrix);

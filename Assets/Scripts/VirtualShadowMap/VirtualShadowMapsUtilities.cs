@@ -108,9 +108,8 @@ namespace VirtualTexture
             return biasScale;
         }
 
-        public static Matrix4x4 GetWorldToShadowMapSpaceMatrix(Matrix4x4 proj, Matrix4x4 view)
+        public static Matrix4x4 GetWorldToShadowMapSpaceMatrix(Matrix4x4 worldToShadow)
         {
-            Matrix4x4 worldToShadow = proj * view;
             var textureScaleAndBias = Matrix4x4.identity;
             textureScaleAndBias.m00 = 0.5f;
             textureScaleAndBias.m11 = 0.5f;

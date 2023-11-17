@@ -76,11 +76,14 @@ float3 GetVirtualShadowTexcoord(float3 worldPos, float3 normalWS)
 	float2 uv = ComputeLookupTexcoord(worldPos);
 	float4 page = SampleLookupPage(uv);
 
-	float scale = (1.0 - clamp(dot(normalWS, _WorldSpaceLightPos0.xyz), 0, 0.9f));
-	worldPos = worldPos + _WorldSpaceLightPos0.xyz * scale.xxx * _VirtualShadowBiasParams.x * page.w;
+	float scale = (1.0 - clamp(dot(normalWS, _WorldSpaceLightPos0.xyz), 0, 0.9f)) * page.w;
+	worldPos = worldPos + _WorldSpaceLightPos0.xyz * scale.xxx * _VirtualShadowBiasParams.x;
 	worldPos = worldPos + normalWS * scale.xxx * _VirtualShadowBiasParams.y;
 
 	float4 ndcpos = mul(_VirtualShadowMatrixs[GetPageIndex(page)], float4(worldPos, 1));
+#if UNITY_UV_STARTS_AT_TOP
+	ndcpos.y = 1 - ndcpos.y;
+#endif
 
 	return float3(ComputeTileCoordFromPage(page, ndcpos.xy / ndcpos.w), ndcpos.z);
 }
@@ -117,7 +120,11 @@ half SampleVirtualShadowMap_PCF3x3(float4 coord, float2 receiverPlaneDepthBias)
 
     shadow = sum / 16.0f;
 
-    return shadow;
+#if defined(SHADER_API_GLCORE) || defined(SHADER_API_GLES) || defined(SHADER_API_GLES3)
+	return 1 - shadow;
+#else
+	return shadow;
+#endif
 }
 
 half SampleVirtualShadowMap_PCF5x5(float4 coord, float2 receiverPlaneDepthBias)
@@ -176,7 +183,11 @@ half SampleVirtualShadowMap_PCF5x5(float4 coord, float2 receiverPlaneDepthBias)
 
 #endif // else of #if defined(SHADOWS_NATIVE)
 
-    return shadow;
+#if defined(SHADER_API_GLCORE) || defined(SHADER_API_GLES) || defined(SHADER_API_GLES3)
+	return 1 - shadow;
+#else
+	return shadow;
+#endif
 }
 
 #endif
