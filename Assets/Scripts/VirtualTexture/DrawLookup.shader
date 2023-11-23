@@ -3,10 +3,8 @@
 	CGINCLUDE
 		#include "UnityCG.cginc"
 
-		UNITY_INSTANCING_BUFFER_START(LookupBlock)
-			UNITY_DEFINE_INSTANCED_PROP(float4, _TiledIndex)
-			UNITY_DEFINE_INSTANCED_PROP(float4x4, _CropMatrix)
-		UNITY_INSTANCING_BUFFER_END(LookupBlock)
+		float4 _TiledIndex;
+		float4x4 _CropMatrix;
 
 		struct Attributes
 		{
@@ -31,22 +29,20 @@
 			UNITY_SETUP_INSTANCE_ID(input);
 			UNITY_TRANSFER_INSTANCE_ID(input, output);
 
-			float4x4 mat = UNITY_MATRIX_M;
-			mat = UNITY_ACCESS_INSTANCED_PROP(LookupBlock, _CropMatrix);
-
-			float2 pos = saturate(mul(mat, input.positionOS).xy);
+			float2 pos = saturate(mul(unity_ObjectToWorld, input.positionOS).xy);
+		#if UNITY_UV_STARTS_AT_TOP
 			pos.y = 1 - pos.y;
+		#endif
 
 			output.positionCS = float4(pos * 2 - 1, 0, 1);
-			output.color = UNITY_ACCESS_INSTANCED_PROP(LookupBlock, _TiledIndex);
 
 			return output;
 		}
 
-		half4 LookupFragment(Varyings input) : SV_Target
+		float4 LookupFragment(Varyings input) : SV_Target
 		{
 			UNITY_SETUP_INSTANCE_ID(input);
-			return input.color;
+			return _TiledIndex;
 		}
 	ENDCG
 	SubShader
@@ -65,8 +61,6 @@
 			#pragma vertex LookupVertex
 			#pragma fragment LookupFragment
 			
-			#pragma multi_compile_instancing
-
 			ENDCG
 		}
 	}

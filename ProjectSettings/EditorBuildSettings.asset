@@ -4,6 +4,10 @@
 EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
-  m_Scenes: []
+  m_Scenes:
+  - enabled: 1
+    path: Assets/Demo/VirtualShadowMaps.unity
+    guid: ce23317f4b0f26e4683197c3ae9f2a09
   m_configObjects:
-    com.unity.addressableassets: {fileID: 11400000, guid: a3a2a04418edbd4478ea657ddca680f1, type: 2}
+    com.unity.addressableassets: {fileID: 11400000, guid: a3a2a04418edbd4478ea657ddca680f1,
+      type: 2}

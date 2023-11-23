@@ -15,17 +15,15 @@ MonoBehaviour:
   m_GroupName: Default Local Group
   m_Data:
     m_SerializedData: []
-  m_GUID: 7299cc3e0e9b5d64ba68b6f24d6a525e
+  m_GUID: 52c1ac7bc099dd84b87e29b1d0ff4aa2
   m_SerializeEntries:
   - m_GUID: d05a1e5d021ad18418214aee0bdeac6c
-    m_Address: Assets/ScrollStaticShadowmap/demo/VirtualShadowMaps_Shadow
+    m_Address: Assets/Demo/VirtualShadowMaps_Shadow
     m_ReadOnly: 0
     m_SerializedLabels: []
-    FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: 91084dddd67382b408b47181fbb85436, type: 2}
   m_SchemaSet:
     m_Schemas:
     - {fileID: 11400000, guid: 5216c623122cf54438adde717bafb5a9, type: 2}
     - {fileID: 11400000, guid: 66746580dee8ec74fbf66af17a8be651, type: 2}
-    - {fileID: 11400000, guid: 392c135f282c91345983b86b7512d0ce, type: 2}

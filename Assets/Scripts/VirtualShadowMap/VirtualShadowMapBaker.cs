@@ -32,16 +32,6 @@ namespace VirtualTexture
         private VirtualShadowMaps m_VirtualShadowMaps;
 
         /// <summary>
-        /// 计算MinMax的包围
-        /// </summary>
-        private ComputeBuffer m_DepthBuffer;
-
-        /// <summary>
-        /// 渲染单个ShadowMap需要的纹理
-        /// </summary>
-		private RenderTexture m_DepthTextureRaw;
-
-        /// <summary>
         /// 渲染单个ShadowMap需要的纹理
         /// </summary>
 		private RenderTexture m_CameraTexture;
