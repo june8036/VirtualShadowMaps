@@ -3,28 +3,13 @@ using System.IO;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using UnityEngine.Experimental.Rendering;
 
 namespace VirtualTexture
 {
     [CustomEditor(typeof(VirtualShadowMaps))]
-    public class VirtualShadowMapsEditor : Editor
+    public sealed class VirtualShadowMapsEditor : Editor
     {
         private VirtualShadowMaps m_VirtualShadowMaps { get { return target as VirtualShadowMaps; } }
-
-        private void SaveRenderTexture(RenderTexture renderTexture, string filePath)
-        {
-            Graphics.SetRenderTarget(renderTexture);
-
-            Texture2D texture = new Texture2D(renderTexture.width, renderTexture.height, GraphicsFormat.R16_SFloat, TextureCreationFlags.None);
-            texture.ReadPixels(new Rect(0, 0, renderTexture.width, renderTexture.height), 0, 0, false);
-            texture.Apply();
-
-            byte[] bytes = texture.EncodeToEXR(Texture2D.EXRFlags.CompressZIP);
-            File.WriteAllBytes(filePath, bytes);
-
-            DestroyImmediate(texture);
-        }
 
         public void GenerateShadowMaps()
         {
@@ -36,6 +21,7 @@ namespace VirtualTexture
                 AssetDatabase.CreateFolder(fileroot, sceneName);
 
             var m_VirtualShadowData = ScriptableObject.CreateInstance<VirtualShadowData>();
+            m_VirtualShadowData.regionCenter = m_VirtualShadowMaps.regionCenter;
             m_VirtualShadowData.regionSize = m_VirtualShadowMaps.regionSize;
             m_VirtualShadowData.pageSize = m_VirtualShadowMaps.pageSize;
             m_VirtualShadowData.maxMipLevel = m_VirtualShadowMaps.maxMipLevel;
@@ -64,8 +50,8 @@ namespace VirtualTexture
                     var pageName = request.mipLevel + "-" + request.pageX + "-" + request.pageY;
                     var outpath = Path.Join(fileroot, sceneName, "ShadowTexBytes-" + pageName + ".exr");
 
-                    var shadowMap = baker.Render(request.pageX, request.pageY, request.mipLevel);
-                    SaveRenderTexture(shadowMap, outpath);
+                    baker.Render(request.pageX, request.pageY, request.mipLevel);
+                    baker.SaveAsFile(outpath);
 
                     m_VirtualShadowData.SetMatrix(request, baker.lightProjecionMatrix);
                     m_VirtualShadowData.SetTexAsset(request, outpath);
@@ -123,6 +109,13 @@ namespace VirtualTexture
             if (GUILayout.Button("Generate Shadow Maps"))
             {
                 this.GenerateShadowMaps();
+            }
+
+            GUILayout.Space(10);
+
+            if (GUILayout.Button("Calculate Region Box"))
+            {
+                m_VirtualShadowMaps.CalculateRegionBox();
             }
 
             GUILayout.Space(10);

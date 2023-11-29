@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
+using UnityEngine.Experimental.Rendering;
 
 namespace VirtualTexture
 {
@@ -34,12 +36,17 @@ namespace VirtualTexture
         /// <summary>
         /// 渲染单个ShadowMap需要的纹理
         /// </summary>
-		private RenderTexture m_CameraTexture;
+		private RenderTexture m_StaticShadowMap;
 
         /// <summary>
         /// 渲染单个ShadowMap需要的投影矩阵
         /// </summary>
         public Matrix4x4 lightProjecionMatrix;
+
+        /// <summary>
+        /// 渲染单个ShadowMap需要的纹理
+        /// </summary>
+		public RenderTexture shadowMap { get => m_StaticShadowMap; }
 
         public VirtualShadowMapBaker(VirtualShadowMaps virtualShadowMaps)
         {
@@ -49,12 +56,12 @@ namespace VirtualTexture
             m_WorldBounds = virtualShadowMaps.CalculateBoundingBox();
             m_VirtualShadowMaps = virtualShadowMaps;
 
-            m_CameraTexture = new RenderTexture(virtualShadowMaps.maxResolution, virtualShadowMaps.maxResolution, 16, RenderTextureFormat.RGHalf);
-            m_CameraTexture.name = "StaticShadowMap";
-            m_CameraTexture.useMipMap = false;
-            m_CameraTexture.autoGenerateMips = false;
-            m_CameraTexture.filterMode = FilterMode.Point;
-            m_CameraTexture.wrapMode = TextureWrapMode.Clamp;
+            m_StaticShadowMap = new RenderTexture(virtualShadowMaps.maxResolution.ToInt(), virtualShadowMaps.maxResolution.ToInt(), 16, RenderTextureFormat.RGHalf);
+            m_StaticShadowMap.name = "StaticShadowMap";
+            m_StaticShadowMap.useMipMap = false;
+            m_StaticShadowMap.autoGenerateMips = false;
+            m_StaticShadowMap.filterMode = FilterMode.Point;
+            m_StaticShadowMap.wrapMode = TextureWrapMode.Clamp;
         }
 
         ~VirtualShadowMapBaker()
@@ -68,7 +75,8 @@ namespace VirtualTexture
             var clipOffset = 0.05f;
 
             var regionRange = m_VirtualShadowMaps.regionRange;
-            var lightTransform = m_VirtualShadowMaps.GetLightTransform();
+            var cameraTransform = m_VirtualShadowMaps.GetCameraTransform();
+            cameraTransform.position = Vector3.zero;
 
             var cellWidth = regionRange.width / m_VirtualShadowMaps.pageSize * mipScale;
             var cellHeight = regionRange.height / m_VirtualShadowMaps.pageSize * mipScale;
@@ -80,16 +88,18 @@ namespace VirtualTexture
             size.z /= m_VirtualShadowMaps.pageSize / mipScale;
 
             var bounds = new Bounds(m_WorldBounds.center + cellCenter, size);
-            var boundsInLightSpace = VirtualShadowMapsUtilities.CalclateFitScene(bounds, lightTransform.worldToLocalMatrix);
+            var boundsInLightSpace = VirtualShadowMapsUtilities.CalclateFitScene(bounds, cameraTransform.worldToLocalMatrix);
             var boundsInLightSpaceOrthographicSize = Mathf.Max(boundsInLightSpace.extents.x, boundsInLightSpace.extents.y);
             var boundsInLightSpaceLocalPosition = new Vector3(boundsInLightSpace.center.x, boundsInLightSpace.center.y, boundsInLightSpace.min.z - clipOffset);
 
-            m_Camera.transform.localPosition = boundsInLightSpaceLocalPosition + lightTransform.worldToLocalMatrix.MultiplyPoint(lightTransform.position);
+            m_Camera.transform.localPosition += boundsInLightSpaceLocalPosition;
             m_Camera.aspect = 1.0f;
             m_Camera.orthographicSize = boundsInLightSpaceOrthographicSize;
             m_Camera.nearClipPlane = clipOffset;
             m_Camera.farClipPlane = clipOffset + boundsInLightSpace.size.z;
             m_Camera.ResetProjectionMatrix();
+            m_Camera.transform.position = Vector3.zero;
+            m_Camera.transform.localPosition += boundsInLightSpaceLocalPosition;
 
             var obliqueBounds = VirtualShadowMapsUtilities.CalculateBoundingBox(m_Renderers, m_Camera);
             obliqueBounds.min = new Vector3(bounds.min.x, obliqueBounds.min.y, bounds.min.z);
@@ -97,17 +107,19 @@ namespace VirtualTexture
 
             var obliqueNormal = Vector3.up;
             var obliquePosition = new Vector3(obliqueBounds.center.x, obliqueBounds.max.y, obliqueBounds.center.z) + obliqueNormal * clipOffset;
-            var obliqueSlope = 1 - Mathf.Clamp01(Vector3.Dot(-lightTransform.forward, obliqueNormal));
-            var obliqueBoundsInLightSpace = VirtualShadowMapsUtilities.CalclateFitScene(obliqueBounds, lightTransform.worldToLocalMatrix);
+            var obliqueSlope = 1 - Mathf.Clamp01(Vector3.Dot(-cameraTransform.forward, obliqueNormal));
+            var obliqueBoundsInLightSpace = VirtualShadowMapsUtilities.CalclateFitScene(obliqueBounds, cameraTransform.worldToLocalMatrix);
             var obliqueBoundsInLightSpaceLocalPosition = new Vector3(obliqueBoundsInLightSpace.center.x, obliqueBoundsInLightSpace.center.y, obliqueBoundsInLightSpace.min.z);
 
-            m_Camera.transform.localPosition = obliqueBoundsInLightSpaceLocalPosition + lightTransform.worldToLocalMatrix.MultiplyPoint(lightTransform.position - lightTransform.forward * (obliqueBounds.size.y * obliqueSlope));
+            m_Camera.transform.localPosition += obliqueBoundsInLightSpaceLocalPosition + cameraTransform.worldToLocalMatrix.MultiplyPoint(cameraTransform.position - cameraTransform.forward * (obliqueBounds.size.y * obliqueSlope));
             m_Camera.orthographicSize = boundsInLightSpaceOrthographicSize;
             m_Camera.nearClipPlane = clipOffset;
             m_Camera.farClipPlane = clipOffset + obliqueBounds.size.y;
             m_Camera.projectionMatrix = m_Camera.CalculateObliqueMatrix(VirtualShadowMapsUtilities.CameraSpacePlane(m_Camera, obliquePosition, obliqueNormal, -1.0f));
 
-            Graphics.SetRenderTarget(m_CameraTexture);
+            RenderTexture savedRT = RenderTexture.active;
+
+            Graphics.SetRenderTarget(m_StaticShadowMap);
             GL.Clear(true, true, Color.black);
             GL.LoadIdentity();
             GL.LoadProjectionMatrix(m_Camera.projectionMatrix * m_Camera.worldToCameraMatrix);
@@ -127,21 +139,45 @@ namespace VirtualTexture
                 }
             }
 
+            Graphics.SetRenderTarget(savedRT);
+
             var projection = GL.GetGPUProjectionMatrix(m_Camera.projectionMatrix, false);
             lightProjecionMatrix = VirtualShadowMapsUtilities.GetWorldToShadowMapSpaceMatrix(projection * m_Camera.worldToCameraMatrix);
 
-            return m_CameraTexture;
+            return m_StaticShadowMap;
+        }
+
+        public void SaveAsFile(string filePath)
+        {
+            RenderTexture savedRT = RenderTexture.active;
+
+            Graphics.SetRenderTarget(m_StaticShadowMap);
+
+            Texture2D texture = new Texture2D(m_StaticShadowMap.width, m_StaticShadowMap.height, GraphicsFormat.R16_SFloat, TextureCreationFlags.None);
+            texture.hideFlags = HideFlags.HideAndDontSave;
+            texture.ReadPixels(new Rect(0, 0, m_StaticShadowMap.width, m_StaticShadowMap.height), 0, 0, false);
+            texture.Apply();
+
+            Graphics.SetRenderTarget(savedRT);
+
+            byte[] bytes = texture.EncodeToEXR(Texture2D.EXRFlags.CompressZIP);
+            File.WriteAllBytes(filePath, bytes);
+
+            if (Application.isEditor)
+                UnityEngine.Object.DestroyImmediate(texture);
+            else
+                UnityEngine.Object.Destroy(texture);
         }
 
         public void Dispose()
         {
-            if (m_CameraTexture != null)
+            if (m_StaticShadowMap != null)
             {
                 if (m_Camera != null)
                     m_Camera.targetTexture = null;
 
-                m_CameraTexture.Release();
-                m_CameraTexture = null;
+                m_StaticShadowMap.Release();
+                m_StaticShadowMap = null;
             }
         }
     }

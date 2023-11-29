@@ -63,11 +63,11 @@
 			float4 MainTex = UNITY_SAMPLE_TEX2D_SAMPLER(_MainTex, _MainTex, input.uv);
 			clip(MainTex.a - _Cutoff);
 
-#if defined(SHADER_API_GLCORE) || defined(SHADER_API_GLES) || defined(SHADER_API_GLES3)
+		#if defined(SHADER_API_GLCORE) || defined(SHADER_API_GLES) || defined(SHADER_API_GLES3)
 			return 1 - (input.depth.z * 0.5f + 0.5f);
-#else
+		#else
 			return input.depth.z;
-#endif
+		#endif
 		}
 	ENDCG
 	SubShader

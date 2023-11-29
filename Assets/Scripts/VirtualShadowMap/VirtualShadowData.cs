@@ -13,6 +13,11 @@ namespace VirtualTexture
         public static int s_SplitBlockSize = 64;
 
         /// <summary>
+        /// 覆盖区域中心.
+        /// </summary>
+        public Vector3 regionCenter = Vector3.zero;
+
+        /// <summary>
         /// 覆盖区域大小.
         /// </summary>
         public int regionSize = 1024;
@@ -30,7 +35,7 @@ namespace VirtualTexture
         /// <summary>
         /// 单个Tile的尺寸.
         /// </summary>
-        public int maxResolution = 1024;
+        public ShadowResolution maxResolution = ShadowResolution._1024;
 
         /// <summary>
         /// 世界包围体.
@@ -155,15 +160,16 @@ namespace VirtualTexture
 
         public Texture2D Uncompress(Texture2D mainTexture, int[] indics)
         {
+            var resolution = this.maxResolution.ToInt();
             var blockSize = s_SplitBlockSize;
-            var blockNum = this.maxResolution / blockSize;
+            var blockNum = resolution / blockSize;
             
             var atlasC = mainTexture.width / blockSize;
-            var sourceTex = new Texture2D(this.maxResolution, this.maxResolution, mainTexture.format, false, true);
+            var sourceTex = new Texture2D(resolution, resolution, mainTexture.format, false, true);
 
-            for (int i = 0; i < this.maxResolution / blockSize; i++)
+            for (int i = 0; i < resolution / blockSize; i++)
             {
-                for (int j = 0; j < this.maxResolution / blockSize; j++)
+                for (int j = 0; j < resolution / blockSize; j++)
                 {
                     if (indics[j + i * blockNum] == -1)
                         continue;

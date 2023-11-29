@@ -64,15 +64,20 @@ namespace VirtualTexture
         public Shader drawLookupShader;
 
         /// <summary>
-        /// 覆盖区域大小.
+        /// 覆盖区域中心.
         /// </summary>
         [Space(10)]
+        public Vector3 regionCenter = Vector3.zero;
+
+        /// <summary>
+        /// 覆盖区域大小.
+        /// </summary>
         public int regionSize = 1024;
 
         /// <summary>
         /// 页表尺寸.
         /// </summary>
-        [SerializeField]
+        [Space(10)]
         public int pageSize = 16;
 
         /// <summary>
@@ -86,7 +91,7 @@ namespace VirtualTexture
         /// 单个Tile的尺寸.
         /// </summary>
         [SerializeField]
-        public int maxResolution = 1024;
+        public ShadowResolution maxResolution = ShadowResolution._1024;
 
         /// <summary>
         /// Depth Bias
@@ -152,13 +157,8 @@ namespace VirtualTexture
             }
         }
 
-        public void OnEnable()
+        public void Start()
         {
-            m_Light = GetComponent<Light>();
-            m_LightTransform = m_Light.transform;
-
-            InitShadowCamera();
-
 #if UNITY_EDITOR
             foreach (var cam in SceneView.GetAllSceneCameras())
             {
@@ -171,14 +171,10 @@ namespace VirtualTexture
                 }
             }
 #endif
-
-            VirtualShadowManager.instance.Register(this);
         }
 
-        public void OnDisable()
+        public void OnDestroy()
         {
-            DestroyShadowCamera();
-
 #if UNITY_EDITOR
             foreach (var cam in SceneView.GetAllSceneCameras())
             {
@@ -190,24 +186,33 @@ namespace VirtualTexture
             }
 #endif
 
-            VirtualShadowManager.instance.Unregister(this);
+            DestroyCameraTexture();
         }
 
-        public void OnDestroy()
+        public void OnEnable()
         {
-            DestroyCameraTexture();
+            m_Light = GetComponent<Light>();
+            m_LightTransform = m_Light.transform;
+
+            InitShadowCamera();
+
+            VirtualShadowManager.instance.Register(this);
+        }
+
+        public void OnDisable()
+        {
+            DestroyShadowCamera();
+
+            VirtualShadowManager.instance.Unregister(this);
         }
 
         public void Reset()
         {
-            var bounds = VirtualShadowMapsUtilities.CalculateBoundingBox(this.GetRenderers());
-
             this.m_Camera = GetCamera();
-            
-            this.regionSize = Mathf.ClosestPowerOfTwo(Mathf.FloorToInt(Mathf.Max(bounds.size.x, bounds.size.z)));
+
             this.pageSize = this.regionSize / 128;
             this.maxMipLevel = 4;
-            this.maxResolution = 1024;
+            this.maxResolution = ShadowResolution._1024;
             this.bias = 0.05f;
             this.normalBias = 0.4f;
 
@@ -217,6 +222,8 @@ namespace VirtualTexture
             this.drawTileShader = Shader.Find("Hidden/Virtual Texture/Draw Tile");
             this.drawDepthTileShader = Shader.Find("Hidden/Virtual Texture/Draw Depth Tile");
             this.drawLookupShader = Shader.Find("Hidden/Virtual Texture/Draw Lookup");
+
+            this.CalculateRegionBox();
 
 #if UNITY_EDITOR
             EditorUtility.SetDirty(this);
@@ -293,7 +300,7 @@ namespace VirtualTexture
                 if (m_CameraTexture != null)
                     m_CameraTexture.Release();
 
-                m_CameraTexture = new RenderTexture(maxResolution, maxResolution, 16, format);
+                m_CameraTexture = new RenderTexture(maxResolution.ToInt(), maxResolution.ToInt(), 16, format);
                 m_CameraTexture.name = "StaticShadowMap";
                 m_CameraTexture.useMipMap = false;
                 m_CameraTexture.autoGenerateMips = false;
@@ -321,6 +328,11 @@ namespace VirtualTexture
         public RenderTexture GetCameraTexture()
         {
             return m_CameraTexture;
+        }
+
+        public Transform GetCameraTransform()
+        {
+            return m_CameraTransform;
         }
 
         public Light GetLight()
@@ -357,13 +369,20 @@ namespace VirtualTexture
             return renderers;
         }
 
+        public void CalculateRegionBox()
+        {
+            var bounds = VirtualShadowMapsUtilities.CalculateBoundingBox(this.GetRenderers());
+            this.regionCenter = bounds.center;
+            this.regionSize = Mathf.ClosestPowerOfTwo(Mathf.FloorToInt(Mathf.Max(bounds.size.x, bounds.size.z)));
+        }
+
         public Bounds CalculateBoundingBox()
         {
             var regionRange = this.regionRange;
             var bounds = VirtualShadowMapsUtilities.CalculateBoundingBox(this.GetRenderers());
             var worldSize = new Vector3(regionRange.size.x, bounds.size.y, regionRange.size.y);
 
-            return new Bounds(bounds.center, worldSize);
+            return new Bounds(regionCenter, worldSize);
         }
 
 #if UNITY_EDITOR

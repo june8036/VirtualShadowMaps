@@ -175,12 +175,7 @@ namespace VirtualTexture
             m_VirtualShadowMapsKeywordFeature = GlobalKeyword.Create(m_VirtualShadowMapsKeyword);
 
             m_LightProjecionMatrixs = new Matrix4x4[UniversalRenderPipeline.maxVisibleAdditionalLights];
-
-            if (VirtualShadowMaps.useStructuredBuffer)
-            {
-                var tilingCount = Mathf.ClosestPowerOfTwo(Mathf.CeilToInt(Mathf.Sqrt(m_MaxTilePool)));
-                m_LightProjecionMatrixBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, m_LightProjecionMatrixs.Length, Marshal.SizeOf<Matrix4x4>());
-            }
+            m_LightProjecionMatrixBuffer = VirtualShadowMaps.useStructuredBuffer ? new GraphicsBuffer(GraphicsBuffer.Target.Structured, m_LightProjecionMatrixs.Length, Marshal.SizeOf<Matrix4x4>()) : null;
 
             m_CommandBuffer = new CommandBuffer();
             m_CommandBuffer.name = "TileTexture.Render";
@@ -263,6 +258,7 @@ namespace VirtualTexture
                     m_CameraCommandBuffer.SetGlobalMatrixArray("_VirtualShadowMatrixs", m_LightProjecionMatrixs);
 
                 this.UpdatePage();
+
                 this.UpdateJob(maxPageRequestLimit);
                 this.UpdateLookup();
             }
@@ -299,7 +295,7 @@ namespace VirtualTexture
             m_DrawLookupMaterial = new Material(m_VirtualShadowMaps.drawLookupShader);
             m_DrawLookupMaterial.enableInstancing = true;
 
-            var tilingCount = Mathf.ClosestPowerOfTwo(Mathf.CeilToInt(Mathf.Sqrt(m_MaxTilePool)));
+            var tilingCount = Mathf.CeilToInt(Mathf.Sqrt(m_MaxTilePool));
             var textureFormat = new VirtualTextureFormat[] { new VirtualTextureFormat(RenderTextureFormat.Shadowmap) };
 
             if (m_VirtualShadowMaps.shadowData != null)
@@ -309,12 +305,12 @@ namespace VirtualTexture
                 var maxMipLevel = m_VirtualShadowMaps.shadowData.maxMipLevel;
 
                 m_RegionRange = m_VirtualShadowMaps.shadowData.regionRange;
-                m_VirtualTexture = new VirtualTexture2D(maxResolution, tilingCount, textureFormat, pageSize, maxMipLevel);
+                m_VirtualTexture = new VirtualTexture2D(maxResolution.ToInt(), tilingCount, textureFormat, pageSize, maxMipLevel);
             }
             else
             {
                 m_RegionRange = m_VirtualShadowMaps.regionRange;
-                m_VirtualTexture = new VirtualTexture2D(m_VirtualShadowMaps.maxResolution, tilingCount, textureFormat, m_VirtualShadowMaps.pageSize, m_VirtualShadowMaps.maxMipLevel);
+                m_VirtualTexture = new VirtualTexture2D(m_VirtualShadowMaps.maxResolution.ToInt(), tilingCount, textureFormat, m_VirtualShadowMaps.pageSize, m_VirtualShadowMaps.maxMipLevel);
             }
 
             this.UpdateBoundsInLightSpace();
@@ -335,7 +331,8 @@ namespace VirtualTexture
 
         private void UpdateBoundsInLightSpace()
         {
-            var worldToLocalMatrix = m_VirtualShadowMaps.GetLightTransform().worldToLocalMatrix;
+            var cameraTransform = m_VirtualShadowMaps.GetCameraTransform();
+            cameraTransform.position = Vector3.zero;
 
             m_WorldBounding = m_VirtualShadowMaps.shadowData != null ? m_VirtualShadowMaps.shadowData.bounds : m_VirtualShadowMaps.CalculateBoundingBox();
             m_BoundsInLightSpace = new Bounds[m_VirtualTexture.maxPageLevel + 1];
@@ -349,7 +346,7 @@ namespace VirtualTexture
                 size.z /= perSize;
 
                 var bounds = new Bounds(m_WorldBounding.center, size);
-                m_BoundsInLightSpace[level] = VirtualShadowMapsUtilities.CalclateFitScene(bounds, worldToLocalMatrix);
+                m_BoundsInLightSpace[level] = VirtualShadowMapsUtilities.CalclateFitScene(bounds, cameraTransform.worldToLocalMatrix);
             }
         }
 
@@ -428,9 +425,9 @@ namespace VirtualTexture
                                     m_VirtualTexture.ActivatePage(tile, page);
                                 }
                             }
-
-                            Addressables.Release(handle);
                         }
+
+                        Addressables.Release(handle);
                     }
                 }
             }
@@ -558,7 +555,7 @@ namespace VirtualTexture
             var orthographicSize = Mathf.Max(m_BoundsInLightSpace[request.mipLevel].extents.x, m_BoundsInLightSpace[request.mipLevel].extents.y);
 
             m_VirtualShadowMaps.CreateCameraTexture(RenderTextureFormat.Shadowmap);
-            m_VirtualShadowMaps.cameraTransform.localPosition = localPosition + lightTransform.worldToLocalMatrix.MultiplyPoint(wolrdPosition);
+            m_VirtualShadowMaps.GetCameraTransform().localPosition = localPosition + lightTransform.worldToLocalMatrix.MultiplyPoint(wolrdPosition);
 
             var shadowCamera = m_VirtualShadowMaps.GetCamera();
             shadowCamera.orthographicSize = orthographicSize;
