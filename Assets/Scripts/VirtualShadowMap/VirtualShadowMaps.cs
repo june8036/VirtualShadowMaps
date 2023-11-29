@@ -373,7 +373,7 @@ namespace VirtualTexture
         {
             var bounds = VirtualShadowMapsUtilities.CalculateBoundingBox(this.GetRenderers());
             this.regionCenter = bounds.center;
-            this.regionSize = Mathf.ClosestPowerOfTwo(Mathf.FloorToInt(Mathf.Max(bounds.size.x, bounds.size.z)));
+            this.regionSize = Mathf.NextPowerOfTwo(Mathf.FloorToInt(Mathf.Max(bounds.size.x, bounds.size.z)));
         }
 
         public Bounds CalculateBoundingBox()

@@ -75,8 +75,7 @@ namespace VirtualTexture
             var clipOffset = 0.05f;
 
             var regionRange = m_VirtualShadowMaps.regionRange;
-            var cameraTransform = m_VirtualShadowMaps.GetCameraTransform();
-            cameraTransform.position = Vector3.zero;
+            var lightTransform = m_VirtualShadowMaps.GetLightTransform();
 
             var cellWidth = regionRange.width / m_VirtualShadowMaps.pageSize * mipScale;
             var cellHeight = regionRange.height / m_VirtualShadowMaps.pageSize * mipScale;
@@ -88,18 +87,16 @@ namespace VirtualTexture
             size.z /= m_VirtualShadowMaps.pageSize / mipScale;
 
             var bounds = new Bounds(m_WorldBounds.center + cellCenter, size);
-            var boundsInLightSpace = VirtualShadowMapsUtilities.CalclateFitScene(bounds, cameraTransform.worldToLocalMatrix);
+            var boundsInLightSpace = VirtualShadowMapsUtilities.CalclateFitScene(bounds, lightTransform.worldToLocalMatrix);
             var boundsInLightSpaceOrthographicSize = Mathf.Max(boundsInLightSpace.extents.x, boundsInLightSpace.extents.y);
             var boundsInLightSpaceLocalPosition = new Vector3(boundsInLightSpace.center.x, boundsInLightSpace.center.y, boundsInLightSpace.min.z - clipOffset);
 
-            m_Camera.transform.localPosition += boundsInLightSpaceLocalPosition;
+            m_Camera.transform.localPosition = boundsInLightSpaceLocalPosition + lightTransform.worldToLocalMatrix.MultiplyPoint(lightTransform.position);
             m_Camera.aspect = 1.0f;
             m_Camera.orthographicSize = boundsInLightSpaceOrthographicSize;
             m_Camera.nearClipPlane = clipOffset;
             m_Camera.farClipPlane = clipOffset + boundsInLightSpace.size.z;
             m_Camera.ResetProjectionMatrix();
-            m_Camera.transform.position = Vector3.zero;
-            m_Camera.transform.localPosition += boundsInLightSpaceLocalPosition;
 
             var obliqueBounds = VirtualShadowMapsUtilities.CalculateBoundingBox(m_Renderers, m_Camera);
             obliqueBounds.min = new Vector3(bounds.min.x, obliqueBounds.min.y, bounds.min.z);
@@ -107,11 +104,11 @@ namespace VirtualTexture
 
             var obliqueNormal = Vector3.up;
             var obliquePosition = new Vector3(obliqueBounds.center.x, obliqueBounds.max.y, obliqueBounds.center.z) + obliqueNormal * clipOffset;
-            var obliqueSlope = 1 - Mathf.Clamp01(Vector3.Dot(-cameraTransform.forward, obliqueNormal));
-            var obliqueBoundsInLightSpace = VirtualShadowMapsUtilities.CalclateFitScene(obliqueBounds, cameraTransform.worldToLocalMatrix);
+            var obliqueSlope = 1 - Mathf.Clamp01(Vector3.Dot(-lightTransform.forward, obliqueNormal));
+            var obliqueBoundsInLightSpace = VirtualShadowMapsUtilities.CalclateFitScene(obliqueBounds, lightTransform.worldToLocalMatrix);
             var obliqueBoundsInLightSpaceLocalPosition = new Vector3(obliqueBoundsInLightSpace.center.x, obliqueBoundsInLightSpace.center.y, obliqueBoundsInLightSpace.min.z);
 
-            m_Camera.transform.localPosition += obliqueBoundsInLightSpaceLocalPosition + cameraTransform.worldToLocalMatrix.MultiplyPoint(cameraTransform.position - cameraTransform.forward * (obliqueBounds.size.y * obliqueSlope));
+            m_Camera.transform.localPosition = obliqueBoundsInLightSpaceLocalPosition + lightTransform.worldToLocalMatrix.MultiplyPoint(lightTransform.position - lightTransform.forward * (obliqueBounds.size.y * obliqueSlope));
             m_Camera.orthographicSize = boundsInLightSpaceOrthographicSize;
             m_Camera.nearClipPlane = clipOffset;
             m_Camera.farClipPlane = clipOffset + obliqueBounds.size.y;
