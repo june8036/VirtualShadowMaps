@@ -11,8 +11,8 @@ namespace VirtualTexture
     [ExecuteInEditMode]
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Light))]
-	public class VirtualShadowMaps : MonoBehaviour
-	{
+    public class VirtualShadowMaps : MonoBehaviour
+    {
         /// <summary>
         /// 光源组件
         /// </summary>
@@ -75,22 +75,15 @@ namespace VirtualTexture
         public int regionSize = 1024;
 
         /// <summary>
-        /// 页表尺寸.
-        /// </summary>
-        [Space(10)]
-        public int pageSize = 16;
-
-        /// <summary>
         /// 最大mipmap等级
         /// </summary>
-        [SerializeField]
-        [Range(0, 8)]
+        [Space(10)]
+        [Range(1, 8)]
         public int maxMipLevel = 4;
 
         /// <summary>
         /// 单个Tile的尺寸.
         /// </summary>
-        [SerializeField]
         public ShadowResolution maxResolution = ShadowResolution._1024;
 
         /// <summary>
@@ -98,13 +91,13 @@ namespace VirtualTexture
         /// </summary>
         [Space(10)]
         [Range(0, 3)]
-		public float bias = 0.05f;
+        public float bias = 0.05f;
 
         /// <summary>
         /// Normal Bias
         /// </summary>
         [Range(0, 3)]
-		public float normalBias = 0.4f;
+        public float normalBias = 0.4f;
 
         /// <summary>
         /// 用于流式加载的数据
@@ -118,15 +111,14 @@ namespace VirtualTexture
         public Transform cameraTransform { get => m_CameraTransform; }
 
         /// <summary>
+        /// 页表尺寸.
+        /// </summary>
+        public int pageSize { get => 1 << (maxMipLevel - 1); }
+
+        /// <summary>
         /// 单个页表对应的世界尺寸.
         /// </summary>
-        public float cellSize
-        {
-            get
-            {
-                return regionSize / (float)pageSize;
-            }
-        }
+        public float cellSize { get => regionSize / (float)pageSize; }
 
         /// <summary>
         /// 页表对应的世界区域.
@@ -210,7 +202,6 @@ namespace VirtualTexture
         {
             this.m_Camera = GetCamera();
 
-            this.pageSize = this.regionSize / 128;
             this.maxMipLevel = 4;
             this.maxResolution = ShadowResolution._1024;
             this.bias = 0.05f;
