@@ -15,16 +15,6 @@ namespace VirtualTexture
 	public class VirtualShadowCamera : MonoBehaviour
 	{
         /// <summary>
-        /// 用于开启VSM功能的关键字
-        /// </summary>
-        private readonly string m_VirtualShadowMapsKeyword = "_VIRTUAL_SHADOW_MAPS";
-
-        /// <summary>
-        /// 用于开启VSM功能的关键字
-        /// </summary>
-        private GlobalKeyword m_VirtualShadowMapsKeywordFeature;
-
-        /// <summary>
         /// 场景包围体
         /// </summary>
 		private Bounds m_WorldBounding;
@@ -60,19 +50,9 @@ namespace VirtualTexture
         private GraphicsBuffer m_LightProjecionMatrixBuffer;
 
         /// <summary>
-        /// 绘制Tile用的CommandBuffer
-        /// </summary>
-        private CommandBuffer m_CommandBuffer;
-
-        /// <summary>
         /// 渲染相机
         /// </summary>
         private Camera m_Camera;
-
-        /// <summary>
-        /// 绘制Tile用的CommandBuffer
-        /// </summary>
-        private CommandBuffer m_CameraCommandBuffer;
 
         /// <summary>
         /// 渲染相机
@@ -127,11 +107,6 @@ namespace VirtualTexture
         /// <summary>
         /// 覆盖的区域.
         /// </summary>
-        private Rect m_RegionRange = new Rect(-128, -128, 128, 128);
-
-        /// <summary>
-        /// 覆盖的区域.
-        /// </summary>
         private ScaleFactor m_RegionChangeScale = ScaleFactor.Eighth;
 
         /// <summary>
@@ -172,32 +147,23 @@ namespace VirtualTexture
 
         public void OnEnable()
         {
-            m_VirtualShadowMapsKeywordFeature = GlobalKeyword.Create(m_VirtualShadowMapsKeyword);
-
             m_LightProjecionMatrixs = new Matrix4x4[UniversalRenderPipeline.maxVisibleAdditionalLights];
             m_LightProjecionMatrixBuffer = VirtualShadowMaps.useStructuredBuffer ? new GraphicsBuffer(GraphicsBuffer.Target.Structured, m_LightProjecionMatrixs.Length, Marshal.SizeOf<Matrix4x4>()) : null;
 
-            m_CommandBuffer = new CommandBuffer();
-            m_CommandBuffer.name = "TileTexture.Render";
-
-            m_CameraCommandBuffer = new CommandBuffer();
-            m_CameraCommandBuffer.name = "VirtualShadowMaps.Setup";
-
+            VirtualShadowManager.instance.RegisterCamera(this);
             RenderPipelineManager.beginCameraRendering += OnBeginCameraRendering;
         }
 
         public void OnDisable()
         {
+            VirtualShadowManager.instance.UnregisterCamera(this);
             RenderPipelineManager.beginCameraRendering -= OnBeginCameraRendering;
 
-            this.m_CommandBuffer?.Release();
-            this.m_CommandBuffer = null;
-
-            this.m_CameraCommandBuffer?.Release();
-            this.m_CameraCommandBuffer = null;
-
-            this.m_LightProjecionMatrixBuffer?.Release();
-            this.m_LightProjecionMatrixBuffer = null;
+            if (this.m_LightProjecionMatrixBuffer != null)
+            {
+                this.m_LightProjecionMatrixBuffer.Release();
+                this.m_LightProjecionMatrixBuffer = null;
+            }
 
             this.DestroyVirtualShadowMaps();
         }
@@ -233,44 +199,12 @@ namespace VirtualTexture
                     this.DestroyVirtualShadowMaps();
             }
 
-            m_CameraCommandBuffer.Clear();
-
-            if ((Application.isPlaying && m_VirtualShadowMaps) || !Application.isPlaying && m_VirtualShadowMaps && m_VirtualShadowMaps.shadowData != null)
+            if (m_VirtualShadowMaps != null && m_VirtualShadowMaps.shadowData != null)
             {
-                m_CameraCommandBuffer.SetKeyword(m_VirtualShadowMapsKeywordFeature, true);
-
-                var orthographicSize = Mathf.Max(m_BoundsInLightSpace[0].extents.x, m_BoundsInLightSpace[0].extents.y);
-                var biasScale = VirtualShadowMapsUtilities.CalculateBiasScale(orthographicSize, m_VirtualTexture.tileSize);
-                var distanceShadowMask = QualitySettings.shadowmaskMode == ShadowmaskMode.DistanceShadowmask ? true : false;
-
-                m_CameraCommandBuffer.SetGlobalVector("_VirtualShadowBiasParams", new Vector4(m_VirtualShadowMaps.bias * biasScale, m_VirtualShadowMaps.normalBias * biasScale * 1.414f, distanceShadowMask? 1: 0, 0));
-                m_CameraCommandBuffer.SetGlobalVector("_VirtualShadowRegionParams", new Vector4(m_RegionRange.x, m_RegionRange.y, 1.0f / m_RegionRange.width, 1.0f / m_RegionRange.height));
-                m_CameraCommandBuffer.SetGlobalVector("_VirtualShadowPageParams", new Vector4(m_VirtualTexture.pageSize, 1.0f / m_VirtualTexture.pageSize, m_VirtualTexture.maxPageLevel, 0));
-                m_CameraCommandBuffer.SetGlobalVector("_VirtualShadowTileParams", new Vector4(m_VirtualTexture.tileSize, m_VirtualTexture.tilingCount, m_VirtualTexture.textireSize, 0));
-                m_CameraCommandBuffer.SetGlobalVector("_VirtualShadowFeedbackParams", new Vector4(m_VirtualTexture.pageSize, m_VirtualTexture.pageSize * m_VirtualTexture.tileSize * m_RegionChangeScale.ToFloat(), m_VirtualTexture.maxPageLevel, 0));
-
-                m_CameraCommandBuffer.SetGlobalTexture("_VirtualShadowTileTexture", m_VirtualTexture.GetTexture(0));
-                m_CameraCommandBuffer.SetGlobalTexture("_VirtualShadowLookupTexture", m_VirtualTexture.GetLookupTexture());
-
-                if (VirtualShadowMaps.useStructuredBuffer)
-                    m_CameraCommandBuffer.SetGlobalBuffer("_VirtualShadowMatrixs_SSBO", m_LightProjecionMatrixBuffer);
-                else
-                    m_CameraCommandBuffer.SetGlobalMatrixArray("_VirtualShadowMatrixs", m_LightProjecionMatrixs);
-
                 this.UpdatePage();
-
                 this.UpdateJob(maxPageRequestLimit);
                 this.UpdateLookup();
             }
-            else
-            {
-                m_CameraCommandBuffer.SetKeyword(m_VirtualShadowMapsKeywordFeature, false);
-            }
-        }
-
-        public Texture GetLookupTexture()
-        {
-            return m_VirtualTexture != null ? m_VirtualTexture.GetLookupTexture() : null;
         }
 
         public Camera GetCamera()
@@ -282,6 +216,11 @@ namespace VirtualTexture
             }
 
             return m_Camera;
+        }
+
+        public Texture GetLookupTexture()
+        {
+            return m_VirtualTexture != null ? m_VirtualTexture.GetLookupTexture() : null;
         }
 
         public Texture GetTileTexture()
@@ -304,12 +243,10 @@ namespace VirtualTexture
                 var maxResolution = m_VirtualShadowMaps.shadowData.maxResolution;
                 var maxMipLevel = m_VirtualShadowMaps.shadowData.maxMipLevel;
 
-                m_RegionRange = m_VirtualShadowMaps.shadowData.regionRange;
                 m_VirtualTexture = new VirtualTexture2D(maxResolution.ToInt(), tilingCount, textureFormat, pageSize, maxMipLevel);
             }
             else
             {
-                m_RegionRange = m_VirtualShadowMaps.regionRange;
                 m_VirtualTexture = new VirtualTexture2D(m_VirtualShadowMaps.maxResolution.ToInt(), tilingCount, textureFormat, m_VirtualShadowMaps.pageSize, m_VirtualShadowMaps.maxMipLevel);
             }
 
@@ -325,8 +262,11 @@ namespace VirtualTexture
             m_DrawLookupMaterial = null;
             m_VirtualShadowMaps = null;
 
-            m_VirtualTexture?.Dispose();
-            m_VirtualTexture = null;
+            if (m_VirtualTexture != null)
+            {
+                m_VirtualTexture.Dispose();
+                m_VirtualTexture = null;
+            }
         }
 
         private void UpdateBoundsInLightSpace()
@@ -357,17 +297,18 @@ namespace VirtualTexture
             for (int level = 0; level <= m_VirtualTexture.maxPageLevel; level++)
             {
                 var mipScale = 1 << level;
+                var regionRange = m_VirtualShadowMaps.shadowData != null ? m_VirtualShadowMaps.shadowData.regionRange : m_VirtualShadowMaps.regionRange;
                 var pageSize = m_VirtualTexture.pageSize / mipScale;
                 var cellSize = m_VirtualShadowMaps.regionSize / m_VirtualTexture.pageSize * mipScale;
                 var cellSize2 = cellSize * cellSize;
 
                 for (int y = 0; y < pageSize; y++)
                 {
-                    var posY = m_RegionRange.yMin + (y + 0.5f) * cellSize;
+                    var posY = regionRange.yMin + (y + 0.5f) * cellSize;
 
                     for (int x = 0; x < pageSize; x++)
                     {
-                        var thisPos = new Vector3(m_RegionRange.xMin + (x + 0.5f) * cellSize, 0, posY);
+                        var thisPos = new Vector3(regionRange.xMin + (x + 0.5f) * cellSize, 0, posY);
                         var estimate = Vector3.SqrMagnitude(thisPos - m_CameraTransform.position) / cellSize2;
 
                         if (estimate < levelOfDetail)
@@ -466,74 +407,54 @@ namespace VirtualTexture
                 m_VirtualTexture.UpdateLookup(m_DrawLookupMaterial);
         }
 
-        private Vector2Int GetFixedCenter(Vector2Int pos)
-        {
-            return new Vector2Int((int)Mathf.Floor(pos.x / regionChangeDistance + 0.5f) * (int)regionChangeDistance,
-                                  (int)Mathf.Floor(pos.y / regionChangeDistance + 0.5f) * (int)regionChangeDistance);
-        }
-
-        private Vector2Int GetFixedPos(Vector3 pos)
-        {
-            return new Vector2Int((int)(Mathf.Floor(pos.x / m_VirtualShadowMaps.cellSize + 0.5f) * m_VirtualShadowMaps.cellSize),
-                                  (int)(Mathf.Floor(pos.z / m_VirtualShadowMaps.cellSize + 0.5f) * m_VirtualShadowMaps.cellSize));
-        }
-
-        private void SetRegion(Rect region)
-        {
-            if (!m_RegionRange.Equals(region))
-            {
-                m_RegionRange = region;
-                m_VirtualTexture.Clear();
-            }
-        }
-
-        public bool UpdateRegion(Vector3 position)
-        {
-            var fixedPos = GetFixedPos(position);
-            var xDiff = fixedPos.x - m_RegionRange.center.x;
-            var yDiff = fixedPos.y - m_RegionRange.center.y;
-
-            if (Mathf.Abs(xDiff) > regionChangeDistance || Mathf.Abs(yDiff) > regionChangeDistance)
-            {
-                var fixedCenter = GetFixedCenter(fixedPos);
-                if (fixedCenter != m_RegionRange.center)
-                {
-                    var oldCenter = new Vector2Int((int)m_RegionRange.center.x, (int)m_RegionRange.center.y);
-                    m_RegionRange = new Rect(fixedCenter.x - m_VirtualShadowMaps.regionSize / 2, fixedCenter.y - m_VirtualShadowMaps.regionSize / 2, m_VirtualShadowMaps.regionSize, m_VirtualShadowMaps.regionSize);
-
-                    Vector2Int offset = (fixedCenter - oldCenter) / (int)m_VirtualShadowMaps.cellSize;
-
-                    m_VirtualTexture.MovePageTable(offset);
-
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
         private void OnBeginCameraRendering(ScriptableRenderContext ctx, Camera camera)
         {
-            if (m_Camera == camera)
-                ctx.ExecuteCommandBuffer(m_CameraCommandBuffer);
+            if (m_Camera == camera && m_VirtualShadowMaps != null)
+            {
+                var orthographicSize = Mathf.Max(m_BoundsInLightSpace[0].extents.x, m_BoundsInLightSpace[0].extents.y);
+                var biasScale = VirtualShadowMapsUtilities.CalculateBiasScale(orthographicSize, m_VirtualTexture.tileSize);
+                var distanceShadowMask = QualitySettings.shadowmaskMode == ShadowmaskMode.DistanceShadowmask ? true : false;
+                var regionRange = m_VirtualShadowMaps.shadowData != null ? m_VirtualShadowMaps.shadowData.regionRange : m_VirtualShadowMaps.regionRange;
+
+                var cmd = CommandBufferPool.Get();
+                cmd.Clear();
+                cmd.SetGlobalVector("_VirtualShadowBiasParams", new Vector4(m_VirtualShadowMaps.bias * biasScale, m_VirtualShadowMaps.normalBias * biasScale * 1.414f, distanceShadowMask ? 1 : 0, 0));
+                cmd.SetGlobalVector("_VirtualShadowRegionParams", new Vector4(regionRange.x, regionRange.y, 1.0f / regionRange.width, 1.0f / regionRange.height));
+                cmd.SetGlobalVector("_VirtualShadowPageParams", new Vector4(m_VirtualTexture.pageSize, 1.0f / m_VirtualTexture.pageSize, m_VirtualTexture.maxPageLevel, 0));
+                cmd.SetGlobalVector("_VirtualShadowTileParams", new Vector4(m_VirtualTexture.tileSize, m_VirtualTexture.tilingCount, m_VirtualTexture.textireSize, 0));
+                cmd.SetGlobalVector("_VirtualShadowFeedbackParams", new Vector4(m_VirtualTexture.pageSize, m_VirtualTexture.pageSize * m_VirtualTexture.tileSize * m_RegionChangeScale.ToFloat(), m_VirtualTexture.maxPageLevel, 0));
+
+                cmd.SetGlobalTexture("_VirtualShadowTileTexture", m_VirtualTexture.GetTexture(0));
+                cmd.SetGlobalTexture("_VirtualShadowLookupTexture", m_VirtualTexture.GetLookupTexture());
+
+                if (VirtualShadowMaps.useStructuredBuffer)
+                    cmd.SetGlobalBuffer("_VirtualShadowMatrixs_SSBO", m_LightProjecionMatrixBuffer);
+                else
+                    cmd.SetGlobalMatrixArray("_VirtualShadowMatrixs", m_LightProjecionMatrixs);
+
+                ctx.ExecuteCommandBuffer(cmd);
+                CommandBufferPool.Release(cmd);
+            }
         }
 
         private bool OnBeginTileLoading(RequestPageData request, int tile, Texture2D texture)
         {
             m_LightProjecionMatrixs[tile] = m_VirtualShadowMaps.shadowData.GetMatrix(request.pageX, request.pageY, request.mipLevel);
 
-            m_CommandBuffer.Clear();
+            var cmd = CommandBufferPool.Get();
+            cmd.Clear();
 
             if (VirtualShadowMaps.useStructuredBuffer)
-                m_CommandBuffer.SetBufferData(m_LightProjecionMatrixBuffer, m_LightProjecionMatrixs);
+                cmd.SetBufferData(m_LightProjecionMatrixBuffer, m_LightProjecionMatrixs);
             else
-                m_CommandBuffer.SetGlobalMatrixArray("_VirtualShadowMatrixs", m_LightProjecionMatrixs);
+                cmd.SetGlobalMatrixArray("_VirtualShadowMatrixs", m_LightProjecionMatrixs);
 
-            m_CommandBuffer.SetGlobalTexture("_MainTex", texture);
-            m_CommandBuffer.SetRenderTarget(m_VirtualTexture.GetTexture(0));
-            m_CommandBuffer.DrawMesh(fullscreenMesh, m_VirtualTexture.GetMatrix(tile), m_DrawTileMaterial, 0);
+            cmd.SetGlobalTexture("_MainTex", texture);
+            cmd.SetRenderTarget(m_VirtualTexture.GetTexture(0));
+            cmd.DrawMesh(fullscreenMesh, m_VirtualTexture.GetMatrix(tile), m_DrawTileMaterial, 0);
 
-            Graphics.ExecuteCommandBuffer(m_CommandBuffer);
+            Graphics.ExecuteCommandBuffer(cmd);
+            CommandBufferPool.Release(cmd);
 
             return true;
         }
@@ -544,10 +465,11 @@ namespace VirtualTexture
             var y = request.pageY;
             var mipScale = request.size;
 
-            var cellWidth = m_RegionRange.width / m_VirtualShadowMaps.pageSize * mipScale;
-            var cellHeight = m_RegionRange.height / m_VirtualShadowMaps.pageSize * mipScale;
+            var regionRange = m_VirtualShadowMaps.shadowData != null ? m_VirtualShadowMaps.shadowData.regionRange : m_VirtualShadowMaps.regionRange;
+            var cellWidth = regionRange.width / m_VirtualShadowMaps.pageSize * mipScale;
+            var cellHeight = regionRange.height / m_VirtualShadowMaps.pageSize * mipScale;
 
-            var realRect = new Rect(m_RegionRange.xMin + x * cellWidth, m_RegionRange.yMin + y * cellHeight, cellWidth, cellHeight);
+            var realRect = new Rect(regionRange.xMin + x * cellWidth, regionRange.yMin + y * cellHeight, cellWidth, cellHeight);
 
             var lightTransform = m_VirtualShadowMaps.GetLightTransform();
             var wolrdPosition = lightTransform.position + new Vector3(realRect.center.x, 0, realRect.center.y);
@@ -568,18 +490,20 @@ namespace VirtualTexture
 
             m_LightProjecionMatrixs[tile] = lightProjecionMatrix;
 
-            m_CommandBuffer.Clear();
+            var cmd = CommandBufferPool.Get();
+            cmd.Clear();
 
             if (VirtualShadowMaps.useStructuredBuffer)
-                m_CommandBuffer.SetBufferData(m_LightProjecionMatrixBuffer, m_LightProjecionMatrixs);
+                cmd.SetBufferData(m_LightProjecionMatrixBuffer, m_LightProjecionMatrixs);
             else
-                m_CommandBuffer.SetGlobalMatrixArray("_VirtualShadowMatrixs", m_LightProjecionMatrixs);
+                cmd.SetGlobalMatrixArray("_VirtualShadowMatrixs", m_LightProjecionMatrixs);
 
-            m_CommandBuffer.SetGlobalTexture("_MainTex", m_VirtualShadowMaps.GetCameraTexture());
-            m_CommandBuffer.SetRenderTarget(m_VirtualTexture.GetTexture(0));
-            m_CommandBuffer.DrawMesh(m_TileMesh, m_VirtualTexture.GetMatrix(tile), m_DrawTileMaterial, 0);
+            cmd.SetGlobalTexture("_MainTex", m_VirtualShadowMaps.GetCameraTexture());
+            cmd.SetRenderTarget(m_VirtualTexture.GetTexture(0));
+            cmd.DrawMesh(m_TileMesh, m_VirtualTexture.GetMatrix(tile), m_DrawTileMaterial, 0);
 
-            Graphics.ExecuteCommandBuffer(m_CommandBuffer);
+            Graphics.ExecuteCommandBuffer(cmd);
+            CommandBufferPool.Release(cmd);
 
             return true;
         }

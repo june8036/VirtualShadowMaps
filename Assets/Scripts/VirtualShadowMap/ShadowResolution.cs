@@ -1,4 +1,16 @@
-﻿namespace VirtualTexture{    public enum ShadowResolution    {        _256 = 256,        _512 = 512,        _1024 = 1024,        _2048 = 2048,        _4096 = 4096    }    public static class ShadowResolutionExtensions    {
+﻿namespace VirtualTexture
+{
+    public enum ShadowResolution
+    {
+        _256 = 256,
+        _512 = 512,
+        _1024 = 1024,
+        _2048 = 2048,
+        _4096 = 4096
+    }
+
+    public static class ShadowResolutionExtensions
+    {
         public static int ToInt(this ShadowResolution mode)
         {
             switch (mode)
@@ -16,4 +28,5 @@
             }
             return 1;
         }
-    }}
+    }
+}

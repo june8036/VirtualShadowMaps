@@ -205,7 +205,7 @@ namespace VirtualTexture
             foreach (var it in this.texAssets)
             {
                 var textureImporter = TextureImporter.GetAtPath(it.Value) as TextureImporter;
-                if (textureImporter)
+                if (textureImporter != null)
                 {
                     textureImporter.textureType = TextureImporterType.SingleChannel;
                     textureImporter.textureShape = TextureImporterShape.Texture2D;

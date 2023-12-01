@@ -139,8 +139,11 @@ namespace VirtualTexture
         {
             for (int i = 0; i < m_TileTextures.Length; i++)
             {
-                m_TileTextures[i]?.Release();
-                m_TileTextures[i] = null;
+                if (m_TileTextures[i] != null)
+                {
+                    m_TileTextures[i].Release();
+                    m_TileTextures[i] = null;
+                }
             }
         }
 	}

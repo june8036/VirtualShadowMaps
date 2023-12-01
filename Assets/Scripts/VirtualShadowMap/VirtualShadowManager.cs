@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEngine;
 
 namespace VirtualTexture
 {
@@ -12,9 +13,12 @@ namespace VirtualTexture
 
         private List<VirtualShadowMaps> m_VirtualShadowMaps;
 
+        private Dictionary<Camera, VirtualShadowCamera> m_VirtualShadowCameras;
+
         VirtualShadowManager()
         {
             m_VirtualShadowMaps = new List<VirtualShadowMaps>();
+            m_VirtualShadowCameras = new Dictionary<Camera, VirtualShadowCamera>();
         }
 
         public VirtualShadowMaps First()
@@ -30,6 +34,21 @@ namespace VirtualTexture
         public void Unregister(VirtualShadowMaps shadowMaps)
         {
             m_VirtualShadowMaps.Remove(shadowMaps);
+        }
+
+        public void RegisterCamera(VirtualShadowCamera camera)
+        {
+            m_VirtualShadowCameras.Add(camera.GetCamera(), camera);
+        }
+
+        public void UnregisterCamera(VirtualShadowCamera camera)
+        {
+            m_VirtualShadowCameras.Remove(camera.GetCamera());
+        }
+
+        public bool TryGetCamera(Camera camera, out VirtualShadowCamera value)
+        {
+            return m_VirtualShadowCameras.TryGetValue(camera, out value);
         }
     }
 }

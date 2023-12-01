@@ -21,8 +21,8 @@ namespace VirtualTexture
         public static Bounds CalculateBoundingBox(List<MeshRenderer> renderers)
         {
             Bounds aabb = new Bounds();
-            aabb.min = Vector3.positiveInfinity;
             aabb.max = Vector3.negativeInfinity;
+            aabb.min = Vector3.positiveInfinity;
 
             foreach (var renderer in renderers)
                 aabb.Encapsulate(renderer.bounds);
@@ -35,8 +35,8 @@ namespace VirtualTexture
             var planes = GeometryUtility.CalculateFrustumPlanes(camera);
 
             Bounds aabb = new Bounds();
-            aabb.min = Vector3.positiveInfinity;
             aabb.max = Vector3.negativeInfinity;
+            aabb.min = Vector3.positiveInfinity;
 
             foreach (var it in renderers)
             {
@@ -50,8 +50,8 @@ namespace VirtualTexture
         public static Bounds CalculateBoundingBox(List<MeshRenderer> renderers, Plane[] planes)
         {
             Bounds aabb = new Bounds();
-            aabb.min = Vector3.positiveInfinity;
             aabb.max = Vector3.negativeInfinity;
+            aabb.min = Vector3.positiveInfinity;
 
             foreach (var it in renderers)
             {
@@ -91,8 +91,8 @@ namespace VirtualTexture
         public static Bounds CalclateFitScene(Bounds bounds, Matrix4x4 worldToLocalMatrix)
         {
             var boundsInLightSpace = new Bounds();
-            boundsInLightSpace.min = Vector3.positiveInfinity;
             boundsInLightSpace.max = Vector3.negativeInfinity;
+            boundsInLightSpace.min = Vector3.positiveInfinity;
 
             for (var i = 0; i < 8; i++)
             {

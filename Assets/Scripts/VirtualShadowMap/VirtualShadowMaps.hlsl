@@ -84,7 +84,7 @@ float3 GetVirtualShadowTexcoord(float3 worldPos, float3 normalWS)
 	float4 page = SampleLookupPage(uv);
 
 	Light light = GetMainLight();
-	float scale = (1.0 - clamp(dot(normalWS, light.direction.xyz), 0, 0.9f)) * page.w;
+	float scale = (1.0f - clamp(dot(normalWS, light.direction.xyz), 0.0f, 0.9f)) * max(1, page.w);
 	worldPos = worldPos + light.direction.xyz * scale.xxx * _VirtualShadowBiasParams.x;
 	worldPos = worldPos + normalWS * scale.xxx * _VirtualShadowBiasParams.y;
 
@@ -106,6 +106,38 @@ inline float3 combineVirtualShadowcoordComponents(float2 baseUV, float2 deltaUV,
 	float3 uv = float3(baseUV + deltaUV, depth);
 	uv.z += dot(deltaUV, receiverPlaneDepthBias); // apply the depth bias
 	return uv;
+}
+
+half SampleVirtualShadowMap_PCF3x3(float4 coord)
+{
+	const float2 offset = float2(0.5, 0.5);
+	float2 uv = (coord.xy * _VirtualShadowTileTexture_TexelSize.zw) + offset;
+	float2 base_uv = (floor(uv) - offset) * _VirtualShadowTileTexture_TexelSize.xy;
+	float2 st = frac(uv);
+
+	float2 uw = float2(3 - 2 * st.x, 1 + 2 * st.x);
+	float2 u = float2((2 - st.x) / uw.x - 1, (st.x) / uw.y + 1);
+	u *= _VirtualShadowTileTexture_TexelSize.x;
+
+	float2 vw = float2(3 - 2 * st.y, 1 + 2 * st.y);
+	float2 v = float2((2 - st.y) / vw.x - 1, (st.y) / vw.y + 1);
+	v *= _VirtualShadowTileTexture_TexelSize.y;
+
+	half shadow;
+	half sum = 0;
+
+	sum += uw[0] * vw[0] * SAMPLE_TEXTURE2D_SHADOW(_VirtualShadowTileTexture, sampler_VirtualShadowTileTexture, float3(base_uv + float2(u[0], v[0]), coord.z));
+	sum += uw[1] * vw[0] * SAMPLE_TEXTURE2D_SHADOW(_VirtualShadowTileTexture, sampler_VirtualShadowTileTexture, float3(base_uv + float2(u[1], v[0]), coord.z));
+	sum += uw[0] * vw[1] * SAMPLE_TEXTURE2D_SHADOW(_VirtualShadowTileTexture, sampler_VirtualShadowTileTexture, float3(base_uv + float2(u[0], v[1]), coord.z));
+	sum += uw[1] * vw[1] * SAMPLE_TEXTURE2D_SHADOW(_VirtualShadowTileTexture, sampler_VirtualShadowTileTexture, float3(base_uv + float2(u[1], v[1]), coord.z));
+
+	shadow = sum / 16.0f;
+
+#if defined(SHADER_API_GLCORE) || defined(SHADER_API_GLES) || defined(SHADER_API_GLES3)
+	return 1 - shadow;
+#else
+	return shadow;
+#endif
 }
 
 float SampleVirtualShadowMap_PCF3x3(float4 coord, float2 receiverPlaneDepthBias)

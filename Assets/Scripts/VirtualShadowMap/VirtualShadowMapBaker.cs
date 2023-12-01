@@ -91,7 +91,7 @@ namespace VirtualTexture
             var boundsInLightSpaceOrthographicSize = Mathf.Max(boundsInLightSpace.extents.x, boundsInLightSpace.extents.y);
             var boundsInLightSpaceLocalPosition = new Vector3(boundsInLightSpace.center.x, boundsInLightSpace.center.y, boundsInLightSpace.min.z - clipOffset);
 
-            m_Camera.transform.localPosition = boundsInLightSpaceLocalPosition + lightTransform.worldToLocalMatrix.MultiplyPoint(lightTransform.position);
+            m_Camera.transform.localPosition = boundsInLightSpaceLocalPosition;
             m_Camera.aspect = 1.0f;
             m_Camera.orthographicSize = boundsInLightSpaceOrthographicSize;
             m_Camera.nearClipPlane = clipOffset;
