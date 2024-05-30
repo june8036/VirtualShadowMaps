@@ -22,11 +22,6 @@ namespace VirtualTexture
                 this.renderPassEvent = passEvent;
             }
 
-            public override void OnCameraSetup(CommandBuffer cmd, ref RenderingData renderingData)
-            {
-                ConfigureTarget(renderingData.cameraData.renderer.cameraColorTarget, renderingData.cameraData.renderer.cameraDepthTarget);
-            }
-
             public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
             {
                 var cmd = CommandBufferPool.Get();
@@ -36,9 +31,16 @@ namespace VirtualTexture
                 if (virtualShadowMaps != null && virtualShadowMaps.enabled)
                 {
                     if (VirtualShadowManager.instance.TryGetCamera(renderingData.cameraData.camera, out var virtualShadowCamera))
-                        cmd.SetKeyword(m_VirtualShadowMapsKeywordFeature, virtualShadowCamera.enabled);
+                    {
+                        if (virtualShadowCamera.enabled)
+                            cmd.EnableKeyword(m_VirtualShadowMapsKeywordFeature);
+                        else
+                            cmd.DisableKeyword(m_VirtualShadowMapsKeywordFeature);
+                    }
                     else
+                    {
                         cmd.DisableKeyword(m_VirtualShadowMapsKeywordFeature);
+                    }
                 }
                 else
                 {

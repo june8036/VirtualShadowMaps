@@ -121,8 +121,6 @@ namespace VirtualTexture
             GL.LoadIdentity();
             GL.LoadProjectionMatrix(m_Camera.projectionMatrix * m_Camera.worldToCameraMatrix);
 
-            m_Material.SetPass(0);
-
             var planes = GeometryUtility.CalculateFrustumPlanes(m_Camera);
 
             foreach (var it in m_Renderers)
@@ -130,6 +128,7 @@ namespace VirtualTexture
                 if (GeometryUtility.TestPlanesAABB(planes, it.bounds))
                 {
                     m_Material.CopyPropertiesFromMaterial(it.sharedMaterial);
+                    m_Material.SetPass(0);
 
                     if (it.TryGetComponent<MeshFilter>(out var meshFilter))
                         Graphics.DrawMeshNow(meshFilter.sharedMesh, it.localToWorldMatrix);

@@ -203,7 +203,6 @@ namespace VirtualTexture
             {
                 this.UpdatePage();
                 this.UpdateJob(maxPageRequestLimit);
-                this.UpdateLookup();
             }
         }
 
@@ -349,6 +348,7 @@ namespace VirtualTexture
                             }
 
                             Addressables.Release(handle);
+                            Resources.UnloadAsset(handle.Result);
                         };
                     }
                     else
@@ -369,6 +369,7 @@ namespace VirtualTexture
                         }
 
                         Addressables.Release(handle);
+                        Resources.UnloadAsset(texture);
                     }
                 }
             }
@@ -411,6 +412,11 @@ namespace VirtualTexture
         {
             if (m_Camera == camera && m_VirtualShadowMaps != null)
             {
+                if (m_VirtualShadowMaps.shadowData != null)
+                {
+                    this.UpdateLookup();
+                }
+
                 var orthographicSize = Mathf.Max(m_BoundsInLightSpace[0].extents.x, m_BoundsInLightSpace[0].extents.y);
                 var biasScale = VirtualShadowMapsUtilities.CalculateBiasScale(orthographicSize, m_VirtualTexture.tileSize);
                 var distanceShadowMask = QualitySettings.shadowmaskMode == ShadowmaskMode.DistanceShadowmask ? true : false;

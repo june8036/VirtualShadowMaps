@@ -325,7 +325,7 @@ namespace VirtualTexture
             }
 
             m_CommandBuffer.Clear();
-            m_CommandBuffer.SetRenderTarget(m_LookupTexture);
+            m_CommandBuffer.SetRenderTarget(m_LookupTexture, RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store);
             m_CommandBuffer.ClearRenderTarget(true, true, Color.clear);
 
             if (m_DrawList.Count > 0)
