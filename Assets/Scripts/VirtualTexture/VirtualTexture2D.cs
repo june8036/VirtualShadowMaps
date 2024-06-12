@@ -43,6 +43,16 @@ namespace VirtualTexture
         private List<DrawPageInfo> m_DrawList = new List<DrawPageInfo>();
 
         /// <summary>
+        /// 当前帧激活的Tiled索引
+        /// </summary>
+        private Vector4[] m_TiledIndex;
+
+        /// <summary>
+        /// 当前帧激活的Tiled矩阵
+        /// </summary>
+        private Matrix4x4[] m_TiledMatrixs;
+
+        /// <summary>
         /// Indirect Property Block
         /// </summary>
         private MaterialPropertyBlock m_PropertyBlock = new MaterialPropertyBlock();
@@ -98,7 +108,10 @@ namespace VirtualTexture
             m_PageTable = new PageTable(pageSize, maxLevel);
             m_TileTexture = new TiledTexture(tileSize, tilingCount, formats);
 
-            m_LookupTexture = new RenderTexture(pageSize, pageSize, 0, RenderTextureFormat.ARGBHalf);
+            m_TiledIndex = new Vector4[tilingCount * tilingCount];
+            m_TiledMatrixs = new Matrix4x4[tilingCount * tilingCount];
+
+            m_LookupTexture = new RenderTexture(pageSize, pageSize, 16, RenderTextureFormat.ARGBHalf);
             m_LookupTexture.name = "LookupTexture";
             m_LookupTexture.filterMode = FilterMode.Point;
             m_LookupTexture.wrapMode = TextureWrapMode.Clamp;
@@ -337,12 +350,14 @@ namespace VirtualTexture
                     var size = m_DrawList[i].rect.width / pageSize;
                     var position = new Vector3(m_DrawList[i].rect.x / pageSize, m_DrawList[i].rect.y / pageSize);
 
-                    var tiledIndex = new Vector4(m_DrawList[i].x, m_DrawList[i].y, m_DrawList[i].mip, 1 << m_DrawList[i].mip);
-                    var tiledMatrixs = Matrix4x4.TRS(position, Quaternion.identity, new Vector3(size, size, size));
-
-                    m_CommandBuffer.SetGlobalVector("_TiledIndex", tiledIndex);
-                    m_CommandBuffer.DrawMesh(m_QuadMesh, tiledMatrixs, material, 0);
+                    m_TiledIndex[i] = new Vector4(m_DrawList[i].x, m_DrawList[i].y, m_DrawList[i].mip, 1 << m_DrawList[i].mip);
+                    m_TiledMatrixs[i] = Matrix4x4.TRS(position, Quaternion.identity, new Vector3(size, size, size));
                 }
+
+                m_PropertyBlock.Clear();
+                m_PropertyBlock.SetVectorArray("_TiledIndex", m_TiledIndex);
+
+                m_CommandBuffer.DrawMeshInstanced(m_QuadMesh, 0, material, 0, m_TiledMatrixs, m_DrawList.Count, m_PropertyBlock);
             }
 
             Graphics.ExecuteCommandBuffer(m_CommandBuffer);

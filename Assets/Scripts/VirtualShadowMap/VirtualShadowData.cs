@@ -134,7 +134,7 @@ namespace VirtualTexture
             {
                 for (int j = 0; j < source.width / blockSize; j++)
                 {
-                    bool isSkip = canSkipTile(colors, j, i, blockSize, source.width);
+                    bool isSkip = VirtualShadowMapsUtilities.CanSkipTile(colors, j, i, blockSize, source.width);
                     indices[j + i * blockNum] = isSkip ? -1 : tileIndex;
                     if (isSkip == false) tileIndex++;
                 }
@@ -209,7 +209,7 @@ namespace VirtualTexture
                 {
                     textureImporter.textureType = TextureImporterType.SingleChannel;
                     textureImporter.textureShape = TextureImporterShape.Texture2D;
-                    textureImporter.textureCompression = TextureImporterCompression.CompressedHQ;
+                    textureImporter.textureCompression = TextureImporterCompression.Uncompressed;
                     textureImporter.alphaSource = TextureImporterAlphaSource.None;
                     textureImporter.sRGBTexture = false;
                     textureImporter.ignorePngGamma = true;
@@ -219,9 +219,23 @@ namespace VirtualTexture
 
                     var defaultSettings = textureImporter.GetDefaultPlatformTextureSettings();
                     defaultSettings.format = TextureImporterFormat.R16;
-                    defaultSettings.textureCompression = TextureImporterCompression.CompressedHQ;
+                    defaultSettings.textureCompression = TextureImporterCompression.Uncompressed;
 
                     textureImporter.SetPlatformTextureSettings(defaultSettings);
+
+                    var standaloneSettings = textureImporter.GetPlatformTextureSettings("Standalone");
+                    standaloneSettings.overridden = true;
+                    standaloneSettings.format = TextureImporterFormat.R16;
+                    standaloneSettings.textureCompression = TextureImporterCompression.Uncompressed;
+
+                    textureImporter.SetPlatformTextureSettings(standaloneSettings);
+
+                    var androidSettings = textureImporter.GetPlatformTextureSettings("Android");
+                    androidSettings.overridden = true;
+                    androidSettings.format = TextureImporterFormat.R16;
+                    androidSettings.textureCompression = TextureImporterCompression.Uncompressed;
+
+                    textureImporter.SetPlatformTextureSettings(androidSettings);
 
                     textureImporter.SaveAndReimport();
                 }

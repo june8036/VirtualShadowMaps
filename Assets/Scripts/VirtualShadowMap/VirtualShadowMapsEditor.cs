@@ -51,11 +51,13 @@ namespace VirtualTexture
                     var outpath = Path.Join(fileroot, sceneName, "ShadowTexBytes-" + pageName + ".exr");
 
                     baker.Render(request.pageX, request.pageY, request.mipLevel);
-                    baker.SaveAsFile(outpath);
 
-                    m_VirtualShadowData.SetMatrix(request, baker.lightProjecionMatrix);
-                    m_VirtualShadowData.SetTexAsset(request, outpath);
-
+                    if (baker.SaveRenderTexture(outpath))
+                    {
+                        m_VirtualShadowData.SetMatrix(request, baker.lightProjecionMatrix);
+                        m_VirtualShadowData.SetTexAsset(request, outpath);
+                    }
+ 
                     requestPageJob.Remove(request);
 
                     if (EditorUtility.DisplayCancelableProgressBar("VirtualShadowMaps Baker", "Processing index:" + i + " total:" + totalRequestCount, i / (float)totalRequestCount))

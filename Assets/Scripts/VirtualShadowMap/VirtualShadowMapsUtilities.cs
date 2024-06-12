@@ -116,8 +116,44 @@ namespace VirtualTexture
             return biasScale;
         }
 
-        public static Matrix4x4 GetWorldToShadowMapSpaceMatrix(Matrix4x4 worldToShadow)
+        public static bool CanSkipTile(Color[] colors, int x, int y, int count, int texWidth)
         {
+            int emptyCount = 0;
+
+            for (int i = 0; i < count; i++)
+            {
+                for (int j = 0; j < count; j++)
+                {
+                    if (colors[(y * count + i) * texWidth + x * count + j].r == 0) emptyCount++;
+                }
+            }
+
+            return emptyCount * 100.0f / count / count > 99;
+        }
+
+        public static int CalculateTileNums(Texture2D source, int blockSize)
+        {
+            var colors = source.GetPixels();
+
+            int tileNums = 0;
+
+            for (int i = 0; i < source.height / blockSize; i++)
+            {
+                for (int j = 0; j < source.width / blockSize; j++)
+                {
+                    if (CanSkipTile(colors, j, i, blockSize, source.width))
+                        continue;
+
+                    tileNums++;
+                }
+            }
+
+            return tileNums;
+        }
+
+        public static Matrix4x4 GetWorldToShadowMapSpaceMatrix(Matrix4x4 proj, Matrix4x4 view)
+        {
+            Matrix4x4 worldToShadow = proj * view;
             var textureScaleAndBias = Matrix4x4.identity;
             textureScaleAndBias.m00 = 0.5f;
             textureScaleAndBias.m11 = 0.5f;

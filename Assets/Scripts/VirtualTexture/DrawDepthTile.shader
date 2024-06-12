@@ -20,6 +20,9 @@
 		Varyings vert (Attributes v)
 		{
 			Varyings o;
+#if UNITY_UV_STARTS_AT_TOP
+			v.vertex.y = 1 - v.vertex.y;
+#endif
 			o.vertex = float4(mul(unity_ObjectToWorld, v.vertex).xyz, 1);
 			o.uv = v.uv;
 			return o;

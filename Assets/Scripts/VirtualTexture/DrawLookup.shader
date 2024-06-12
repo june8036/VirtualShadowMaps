@@ -1,10 +1,15 @@
 ﻿Shader "Hidden/Virtual Texture/Draw Lookup"
 {
+	Properties
+	{
+		_TiledIndex("TiledIndex", Vector) = (1,1,1,1)
+	}
 	CGINCLUDE
 		#include "UnityCG.cginc"
 
-		float4 _TiledIndex;
-		float4x4 _CropMatrix;
+		UNITY_INSTANCING_BUFFER_START(Prop)
+			UNITY_DEFINE_INSTANCED_PROP(float4, _TiledIndex)
+		UNITY_INSTANCING_BUFFER_END(Prop)
 
 		struct Attributes
 		{
@@ -29,12 +34,13 @@
 			UNITY_SETUP_INSTANCE_ID(input);
 			UNITY_TRANSFER_INSTANCE_ID(input, output);
 
-			float2 pos = saturate(mul(unity_ObjectToWorld, input.positionOS).xy);
-		#if UNITY_UV_STARTS_AT_TOP
+			float2 pos = saturate(mul(UNITY_MATRIX_M, input.positionOS).xy);
+#if UNITY_UV_STARTS_AT_TOP
 			pos.y = 1 - pos.y;
-		#endif
+#endif
 
 			output.positionCS = float4(pos * 2 - 1, 0, 1);
+			output.color = UNITY_ACCESS_INSTANCED_PROP(Prop, _TiledIndex);
 
 			return output;
 		}
@@ -42,7 +48,7 @@
 		float4 LookupFragment(Varyings input) : SV_Target
 		{
 			UNITY_SETUP_INSTANCE_ID(input);
-			return _TiledIndex;
+			return input.color;
 		}
 	ENDCG
 	SubShader
@@ -61,6 +67,8 @@
 			#pragma vertex LookupVertex
 			#pragma fragment LookupFragment
 			
+			#pragma multi_compile_instancing
+
 			ENDCG
 		}
 	}

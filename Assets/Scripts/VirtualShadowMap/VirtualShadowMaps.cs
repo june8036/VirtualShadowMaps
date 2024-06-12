@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -44,24 +45,19 @@ namespace VirtualTexture
 		private RenderTexture m_CameraTexture;
 
         /// <summary>
-        /// Shadow Caster 着色器
+        /// Shadow Caster 材质
         /// </summary>
-        public Shader castShader;
+        public Material castMaterial;
 
         /// <summary>
-        /// Tile纹理生成着色器
+        /// Tile纹理生成材质
         /// </summary>
-        public Shader drawTileShader;
+        public Material drawTileMaterial;
 
         /// <summary>
-        /// Tile纹理生成着色器
+        /// Lookup纹理生成材质
         /// </summary>
-        public Shader drawDepthTileShader;
-
-        /// <summary>
-        /// Lookup纹理生成着色器
-        /// </summary>
-        public Shader drawLookupShader;
+        public Material drawLookupMaterial;
 
         /// <summary>
         /// 覆盖区域中心.
@@ -133,24 +129,27 @@ namespace VirtualTexture
 
         public static bool useStructuredBuffer
         {
-            // There are some performance issues with StructuredBuffers in some platforms.
-            // We fallback to UBO in those cases.
             get
             {
-                // TODO: For now disabling SSBO until figure out Vulkan binding issues.
-                // When enabling this also enable USE_STRUCTURED_BUFFER_FOR_LIGHT_DATA in shader side in Input.hlsl
-                return false;
-
-                // We don't use SSBO in D3D because we can't figure out without adding shader variants if platforms is D3D10.
-                //GraphicsDeviceType deviceType = SystemInfo.graphicsDeviceType;
-                //return !Application.isMobilePlatform &&
-                //    (deviceType == GraphicsDeviceType.Metal || deviceType == GraphicsDeviceType.Vulkan ||
-                //     deviceType == GraphicsDeviceType.PlayStation4 || deviceType == GraphicsDeviceType.PlayStation5 || deviceType == GraphicsDeviceType.XboxOne);
+                GraphicsDeviceType deviceType = SystemInfo.graphicsDeviceType;
+                return !Application.isMobilePlatform &&
+                    (deviceType == GraphicsDeviceType.Direct3D11 ||
+                     deviceType == GraphicsDeviceType.Direct3D12 ||
+                     deviceType == GraphicsDeviceType.PlayStation4 ||
+                     deviceType == GraphicsDeviceType.PlayStation5 ||
+                     deviceType == GraphicsDeviceType.XboxOne);
             }
         }
 
-        public void Start()
+        public static int maxUniformBufferSize { get => 64; }
+
+        public void OnEnable()
         {
+            m_Light = GetComponent<Light>();
+            m_LightTransform = m_Light.transform;
+
+            InitShadowCamera();
+
 #if UNITY_EDITOR
             foreach (var cam in SceneView.GetAllSceneCameras())
             {
@@ -163,10 +162,14 @@ namespace VirtualTexture
                 }
             }
 #endif
+
+            VirtualShadowManager.instance.Register(this);
         }
 
-        public void OnDestroy()
+        public void OnDisable()
         {
+            DestroyShadowCamera();
+
 #if UNITY_EDITOR
             foreach (var cam in SceneView.GetAllSceneCameras())
             {
@@ -178,30 +181,18 @@ namespace VirtualTexture
             }
 #endif
 
-            DestroyCameraTexture();
-        }
-
-        public void OnEnable()
-        {
-            m_Light = GetComponent<Light>();
-            m_LightTransform = m_Light.transform;
-
-            InitShadowCamera();
-
-            VirtualShadowManager.instance.Register(this);
-        }
-
-        public void OnDisable()
-        {
-            DestroyShadowCamera();
-
             VirtualShadowManager.instance.Unregister(this);
+        }
+
+        public void OnDestroy()
+        {
+            DestroyCameraTexture();
         }
 
         public void Reset()
         {
             this.m_Camera = GetCamera();
-
+            
             this.maxMipLevel = 4;
             this.maxResolution = ShadowResolution._1024;
             this.bias = 0.05f;
@@ -209,10 +200,9 @@ namespace VirtualTexture
 
             this.shadowData = null;
 
-            this.castShader = Shader.Find("Hidden/StaticShadowMap/ShadowCaster");
-            this.drawTileShader = Shader.Find("Hidden/Virtual Texture/Draw Tile");
-            this.drawDepthTileShader = Shader.Find("Hidden/Virtual Texture/Draw Depth Tile");
-            this.drawLookupShader = Shader.Find("Hidden/Virtual Texture/Draw Lookup");
+            this.castMaterial = null;
+            this.drawTileMaterial = null;
+            this.drawLookupMaterial = null;
 
             this.CalculateRegionBox();
 
@@ -254,7 +244,7 @@ namespace VirtualTexture
             m_Camera.allowDynamicResolution = false;
             m_Camera.aspect = 1.0f;
             m_Camera.useOcclusionCulling = false;
-            m_Camera.SetReplacementShader(castShader, "RenderType");
+            m_Camera.SetReplacementShader(castMaterial.shader, "RenderType");
 
             m_CameraTransform = m_Camera.GetComponent<Transform>();
             m_CameraTransform.localRotation = Quaternion.identity;
@@ -392,14 +382,17 @@ namespace VirtualTexture
 
         public void OnValidate()
         {
-            if (this.castShader == null)
-                this.castShader = Shader.Find("Hidden/StaticShadowMap/ShadowCaster");
-            if (this.drawTileShader == null)
-                this.drawTileShader = Shader.Find("Hidden/Virtual Texture/Draw Tile");
-            if (this.drawDepthTileShader == null)
-                this.drawDepthTileShader = Shader.Find("Hidden/Virtual Texture/Draw Depth Tile");
-            if (this.drawLookupShader == null)
-                this.drawLookupShader = Shader.Find("Hidden/Virtual Texture/Draw Lookup");
+            if (this.castMaterial == null)
+                this.castMaterial = new Material(Shader.Find("Hidden/StaticShadowMap/ShadowCaster"));
+
+            if (this.drawTileMaterial == null)
+                this.drawTileMaterial = new Material(Shader.Find("Hidden/Virtual Texture/Draw Depth Tile"));
+
+            if (this.drawLookupMaterial == null)
+            {
+                this.drawLookupMaterial = new Material(Shader.Find("Hidden/Virtual Texture/Draw Lookup"));
+                this.drawLookupMaterial.enableInstancing = true;
+            }
         }
 
         public void OnDrawGizmos()

@@ -52,7 +52,7 @@ namespace VirtualTexture
         {
             m_Camera = virtualShadowMaps.GetCamera();
             m_Renderers = virtualShadowMaps.GetRenderers();
-            m_Material = new Material(virtualShadowMaps.castShader);
+            m_Material = virtualShadowMaps.castMaterial;
             m_WorldBounds = virtualShadowMaps.CalculateBoundingBox();
             m_VirtualShadowMaps = virtualShadowMaps;
 
@@ -91,7 +91,7 @@ namespace VirtualTexture
             var boundsInLightSpaceOrthographicSize = Mathf.Max(boundsInLightSpace.extents.x, boundsInLightSpace.extents.y);
             var boundsInLightSpaceLocalPosition = new Vector3(boundsInLightSpace.center.x, boundsInLightSpace.center.y, boundsInLightSpace.min.z - clipOffset);
 
-            m_Camera.transform.localPosition = boundsInLightSpaceLocalPosition;
+            m_Camera.transform.localPosition = boundsInLightSpaceLocalPosition + lightTransform.worldToLocalMatrix.MultiplyPoint(lightTransform.position);
             m_Camera.aspect = 1.0f;
             m_Camera.orthographicSize = boundsInLightSpaceOrthographicSize;
             m_Camera.nearClipPlane = clipOffset;
@@ -138,12 +138,12 @@ namespace VirtualTexture
             Graphics.SetRenderTarget(savedRT);
 
             var projection = GL.GetGPUProjectionMatrix(m_Camera.projectionMatrix, false);
-            lightProjecionMatrix = VirtualShadowMapsUtilities.GetWorldToShadowMapSpaceMatrix(projection * m_Camera.worldToCameraMatrix);
+            lightProjecionMatrix = VirtualShadowMapsUtilities.GetWorldToShadowMapSpaceMatrix(projection, m_Camera.worldToCameraMatrix);
 
             return m_StaticShadowMap;
         }
 
-        public void SaveAsFile(string filePath)
+        public bool SaveRenderTexture(string filePath)
         {
             RenderTexture savedRT = RenderTexture.active;
 
@@ -156,13 +156,19 @@ namespace VirtualTexture
 
             Graphics.SetRenderTarget(savedRT);
 
-            byte[] bytes = texture.EncodeToEXR(Texture2D.EXRFlags.CompressZIP);
-            File.WriteAllBytes(filePath, bytes);
+            var tileNums = VirtualShadowMapsUtilities.CalculateTileNums(texture, VirtualShadowData.s_SplitBlockSize);
+            if (tileNums > 0)
+            {
+                byte[] bytes = texture.EncodeToEXR(Texture2D.EXRFlags.CompressZIP);
+                File.WriteAllBytes(filePath, bytes);
+            }
 
             if (Application.isEditor)
                 UnityEngine.Object.DestroyImmediate(texture);
             else
                 UnityEngine.Object.Destroy(texture);
+
+            return (tileNums > 0) ? true : false;
         }
 
         public void Dispose()

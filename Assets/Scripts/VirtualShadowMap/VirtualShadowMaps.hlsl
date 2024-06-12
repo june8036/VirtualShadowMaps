@@ -1,5 +1,9 @@
-#ifndef UNITY_VIRTUAL_TEXTURE_INCLUDED
-#define UNITY_VIRTUAL_TEXTURE_INCLUDED
+#ifndef UNITY_VIRTUAL_SHADOW_MAPS_INCLUDED
+#define UNITY_VIRTUAL_SHADOW_MAPS_INCLUDED
+
+#if defined(SHADER_API_D3D11) || defined(SHADER_API_PS4) || defined(SHADER_API_PS5) || defined(SHADER_API_XBOXONE)
+#define USE_STRUCTURED_BUFFER_FOR_VIRTUAL_SHADOW_MAPS 1
+#endif
 
 float _VirtualShadowMapEnable;
 
@@ -30,10 +34,11 @@ float4 _VirtualShadowFeedbackParams;
 // y = normal bias
 float4 _VirtualShadowBiasParams;
 
-#if USE_STRUCTURED_BUFFER_FOR_LIGHT_DATA
+#if USE_STRUCTURED_BUFFER_FOR_VIRTUAL_SHADOW_MAPS
 StructuredBuffer<float4x4> _VirtualShadowMatrixs_SSBO;
 #else
-float4x4 _VirtualShadowMatrixs[MAX_VISIBLE_LIGHTS];
+#define MAX_VISIBLE_SHADOW_UBO 64
+float4x4 _VirtualShadowMatrixs[MAX_VISIBLE_SHADOW_UBO];
 #endif
 
 TEXTURE2D(_VirtualShadowLookupTexture);
@@ -88,7 +93,7 @@ float3 GetVirtualShadowTexcoord(float3 worldPos, float3 normalWS)
 	worldPos = worldPos + light.direction.xyz * scale.xxx * _VirtualShadowBiasParams.x;
 	worldPos = worldPos + normalWS * scale.xxx * _VirtualShadowBiasParams.y;
 
-#if USE_STRUCTURED_BUFFER_FOR_LIGHT_DATA
+#if USE_STRUCTURED_BUFFER_FOR_VIRTUAL_SHADOW_MAPS
 	float4 ndcpos = mul(_VirtualShadowMatrixs_SSBO[GetPageIndex(page)], float4(worldPos, 1));
 #else
 	float4 ndcpos = mul(_VirtualShadowMatrixs[GetPageIndex(page)], float4(worldPos, 1));
