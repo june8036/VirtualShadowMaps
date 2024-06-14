@@ -446,13 +446,15 @@ namespace VirtualTexture
                     this.UpdateLookup();
                 }
 
+                var lightSpaceBounds = m_BoundsInLightSpace[m_VirtualTexture.maxPageLevel];
                 var orthographicSize = Mathf.Max(m_BoundsInLightSpace[0].extents.x, m_BoundsInLightSpace[0].extents.y);
                 var biasScale = VirtualShadowMapsUtilities.CalculateBiasScale(orthographicSize, m_VirtualTexture.tileSize);
                 var distanceShadowMask = QualitySettings.shadowmaskMode == ShadowmaskMode.DistanceShadowmask ? true : false;
-                var regionRange = m_VirtualShadowMaps.shadowData != null ? m_VirtualShadowMaps.shadowData.regionRange : m_VirtualShadowMaps.regionRange;
+                var regionRange = new Rect(lightSpaceBounds.min.x, lightSpaceBounds.min.y, lightSpaceBounds.size.x, lightSpaceBounds.size.y);
 
                 var cmd = CommandBufferPool.Get();
                 cmd.Clear();
+                cmd.SetGlobalMatrix("_VirtualShadowMatrix", m_VirtualShadowMaps.GetLightTransform().worldToLocalMatrix);
                 cmd.SetGlobalVector("_VirtualShadowBiasParams", new Vector4(m_VirtualShadowMaps.bias * biasScale, m_VirtualShadowMaps.normalBias * biasScale * 1.414f, distanceShadowMask ? 1 : 0, 0));
                 cmd.SetGlobalVector("_VirtualShadowRegionParams", new Vector4(regionRange.x, regionRange.y, 1.0f / regionRange.width, 1.0f / regionRange.height));
                 cmd.SetGlobalVector("_VirtualShadowPageParams", new Vector4(m_VirtualTexture.pageSize, 1.0f / m_VirtualTexture.pageSize, m_VirtualTexture.maxPageLevel, 0));

@@ -14,6 +14,23 @@ namespace VirtualTexture
             float Z = (index < 4) ? (aabb.min.z) : (aabb.max.z);
             return new Vector3(X, Y, Z);
         }
+
+        public static Bounds CalclateFitScene(Bounds bounds, Matrix4x4 worldToLocalMatrix)
+        {
+            var boundsInLightSpace = new Bounds();
+            boundsInLightSpace.max = Vector3.negativeInfinity;
+            boundsInLightSpace.min = Vector3.positiveInfinity;
+
+            for (var i = 0; i < 8; i++)
+            {
+                Vector3 corner = bounds.GetCorner(i);
+                Vector3 localPosition = worldToLocalMatrix.MultiplyPoint(corner);
+
+                boundsInLightSpace.Encapsulate(localPosition);
+            }
+
+            return boundsInLightSpace;
+        }
     }
 
     public static class VirtualShadowMapsUtilities
@@ -98,7 +115,7 @@ namespace VirtualTexture
             {
                 Vector3 corner = bounds.GetCorner(i);
                 Vector3 localPosition = worldToLocalMatrix.MultiplyPoint(corner);
-
+                
                 boundsInLightSpace.Encapsulate(localPosition);
             }
 

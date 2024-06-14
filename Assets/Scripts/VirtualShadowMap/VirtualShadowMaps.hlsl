@@ -34,6 +34,9 @@ float4 _VirtualShadowFeedbackParams;
 // y = normal bias
 float4 _VirtualShadowBiasParams;
 
+// WorldToLocalMatrix
+float4x4 _VirtualShadowMatrix;
+
 #if USE_STRUCTURED_BUFFER_FOR_VIRTUAL_SHADOW_MAPS
 StructuredBuffer<float4x4> _VirtualShadowMatrixs_SSBO;
 #else
@@ -68,7 +71,8 @@ float4 ComputePageMipLevel(float2 uv)
 
 float2 ComputeLookupTexcoord(float3 worldPos)
 {
-	return (worldPos.xz - _VirtualShadowRegionParams.xy) * _VirtualShadowRegionParams.zw;
+	localPos = mul(_VirtualShadowMatrix, worldPos);
+	return (localPos.xy - _VirtualShadowRegionParams.xy) * _VirtualShadowRegionParams.zw;
 }
 
 float4 SampleLookupPage(float2 uv)

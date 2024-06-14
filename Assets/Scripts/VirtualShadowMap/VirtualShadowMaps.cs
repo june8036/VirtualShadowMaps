@@ -229,7 +229,7 @@ namespace VirtualTexture
         {
             m_CameraGO = new GameObject("", typeof(Camera));
             m_CameraGO.name = "VirtualShadowCamera" + m_CameraGO.GetInstanceID().ToString();
-            m_CameraGO.hideFlags = HideFlags.HideAndDontSave;
+            //m_CameraGO.hideFlags = HideFlags.HideAndDontSave;
             m_CameraGO.transform.parent = this.transform;
 
             m_Camera = m_CameraGO.GetComponent<Camera>();
@@ -324,6 +324,16 @@ namespace VirtualTexture
         public Transform GetLightTransform()
         {
             return m_LightTransform;
+        }
+
+        public Vector3 TransformToLightSpace(Vector3 worldPos)
+        {
+            return m_LightTransform.worldToLocalMatrix.MultiplyPoint(worldPos);
+        }
+
+        public Vector3 TransformToWorldSpace(Vector3 localPos)
+        {
+            return m_LightTransform.localToWorldMatrix.MultiplyPoint(localPos);
         }
 
         public List<MeshRenderer> GetRenderers()
