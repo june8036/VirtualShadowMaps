@@ -229,7 +229,7 @@ namespace VirtualTexture
         {
             m_CameraGO = new GameObject("", typeof(Camera));
             m_CameraGO.name = "VirtualShadowCamera" + m_CameraGO.GetInstanceID().ToString();
-            //m_CameraGO.hideFlags = HideFlags.HideAndDontSave;
+            m_CameraGO.hideFlags = HideFlags.HideAndDontSave;
             m_CameraGO.transform.parent = this.transform;
 
             m_Camera = m_CameraGO.GetComponent<Camera>();
