@@ -311,7 +311,7 @@ namespace VirtualTexture
                 size.z /= perSize;
 
                 var bounds = new Bounds(m_WorldBounding.center, size);
-                m_BoundsInLightSpace[level] = VirtualShadowMapsUtilities.CalclateFitScene(bounds, cameraTransform.worldToLocalMatrix);
+                m_BoundsInLightSpace[level] = bounds.CalclateFitScene(cameraTransform.worldToLocalMatrix);
             }
         }
 
@@ -319,25 +319,39 @@ namespace VirtualTexture
         {
             GeometryUtility.CalculateFrustumPlanes(GetCamera(), m_CullingPlanes);
 
+            var lightTransform = m_VirtualShadowMaps.GetLightTransform();
+            var lightSpaceBounds = m_VirtualShadowMaps.shadowData.bounds.CalclateFitScene(lightTransform.worldToLocalMatrix);
+            var lightSpaceMin = new Vector3(lightSpaceBounds.min.x, lightSpaceBounds.min.y, 0);
+            var lightSpaceRight = new Vector3(lightSpaceBounds.max.x, lightSpaceBounds.min.y, 0);
+            var lightSpaceBottom = new Vector3(lightSpaceBounds.min.x, lightSpaceBounds.max.y, 0);
+            var lightSpaceAxisX = Vector3.Normalize(lightSpaceRight - lightSpaceMin);
+            var lightSpaceAxisY = Vector3.Normalize(lightSpaceBottom - lightSpaceMin);
+            var lightSpaceWidth = (lightSpaceRight - lightSpaceMin).magnitude;
+            var lightSpaceHeight = (lightSpaceBottom - lightSpaceMin).magnitude;
+
             for (int level = 0; level <= m_VirtualTexture.maxPageLevel; level++)
             {
                 var mipScale = 1 << level;
                 var pageSize = m_VirtualTexture.pageSize / mipScale;
-                var cellSize = m_VirtualShadowMaps.regionSize / m_VirtualTexture.pageSize * mipScale;
+
+                var cellWidth = lightSpaceWidth / m_VirtualShadowMaps.pageSize * mipScale;
+                var cellHeight = lightSpaceHeight / m_VirtualShadowMaps.pageSize * mipScale;
+                var cellSize = Mathf.Max(cellWidth, cellHeight);
                 var cellSize2 = cellSize * cellSize;
 
                 for (int y = 0; y < pageSize; y++)
                 {
-                    var posY = m_RegionRange.yMin + (y + 0.5f) * cellSize;
+                    var posY = lightSpaceMin + lightSpaceAxisY * (y + 0.5f) * cellHeight;
 
                     for (int x = 0; x < pageSize; x++)
                     {
-                        var thisPos = new Vector3(m_RegionRange.xMin + (x + 0.5f) * cellSize, 0, posY);
-                        var estimate = Vector3.SqrMagnitude(thisPos - m_CameraTransform.position) / cellSize2;
+                        var thisPos = lightSpaceAxisX * (x + 0.5f) * cellWidth + posY;
+                        var worldPos = m_VirtualShadowMaps.TransformToWorldSpace(thisPos);
+                        var estimate = Vector3.SqrMagnitude(worldPos - m_CameraTransform.position) / cellSize2;
 
                         if (estimate < levelOfDetail)
                         {
-                            var bound = new Bounds(thisPos, new Vector3(cellSize, cellSize, cellSize));
+                            var bound = new Bounds(worldPos, new Vector3(cellWidth, cellSize, cellHeight));
                             if (GeometryUtility.TestPlanesAABB(m_CullingPlanes, bound))
                                 m_VirtualTexture.LoadPage(x, y, level);
                         }
@@ -454,7 +468,7 @@ namespace VirtualTexture
 
                 var cmd = CommandBufferPool.Get();
                 cmd.Clear();
-                cmd.SetGlobalMatrix("_VirtualShadowMatrix", m_VirtualShadowMaps.GetLightTransform().worldToLocalMatrix);
+                cmd.SetGlobalMatrix("_VirtualShadowLightMatrix", m_VirtualShadowMaps.GetLightTransform().worldToLocalMatrix);
                 cmd.SetGlobalVector("_VirtualShadowBiasParams", new Vector4(m_VirtualShadowMaps.bias * biasScale, m_VirtualShadowMaps.normalBias * biasScale * 1.414f, distanceShadowMask ? 1 : 0, 0));
                 cmd.SetGlobalVector("_VirtualShadowRegionParams", new Vector4(regionRange.x, regionRange.y, 1.0f / regionRange.width, 1.0f / regionRange.height));
                 cmd.SetGlobalVector("_VirtualShadowPageParams", new Vector4(m_VirtualTexture.pageSize, 1.0f / m_VirtualTexture.pageSize, m_VirtualTexture.maxPageLevel, 0));

@@ -75,8 +75,7 @@ namespace VirtualTexture
             var clipOffset = 0.05f;
 
             var lightTransform = m_VirtualShadowMaps.GetLightTransform();
-
-            var lightSpaceBounds = VirtualShadowMapsUtilities.CalclateFitScene(m_WorldBounds, lightTransform.worldToLocalMatrix);
+            var lightSpaceBounds = m_WorldBounds.CalclateFitScene(lightTransform.worldToLocalMatrix);
             var lightSpaceMin = new Vector3(lightSpaceBounds.min.x, lightSpaceBounds.min.y, 0);
             var lightSpaceRight = new Vector3(lightSpaceBounds.max.x, lightSpaceBounds.min.y, 0);
             var lightSpaceBottom = new Vector3(lightSpaceBounds.min.x, lightSpaceBounds.max.y, 0);
@@ -94,40 +93,27 @@ namespace VirtualTexture
             boundsInLightSpace.min = new Vector3(cellMin.x, cellMin.y, lightSpaceBounds.min.z);
             boundsInLightSpace.max = new Vector3(cellMax.x, cellMax.y, lightSpaceBounds.max.z);
 
-            var size = m_WorldBounds.size;
-            size.x /= m_VirtualShadowMaps.pageSize / mipScale;
-            size.z /= m_VirtualShadowMaps.pageSize / mipScale;
-
-            var bounds = VirtualShadowMapsUtilities.CalclateFitScene(boundsInLightSpace, lightTransform.localToWorldMatrix);
-            bounds.size = size;
-
             var boundsInLightSpaceOrthographicSize = Mathf.Max(boundsInLightSpace.extents.x, boundsInLightSpace.extents.y);
             var boundsInLightSpaceLocalPosition = new Vector3(boundsInLightSpace.center.x, boundsInLightSpace.center.y, boundsInLightSpace.min.z - clipOffset);
 
             m_Camera.transform.localPosition = boundsInLightSpaceLocalPosition;
             m_Camera.aspect = 1.0f;
-            m_Camera.orthographicSize = boundsInLightSpaceOrthographicSize + 1;
+            m_Camera.orthographicSize = boundsInLightSpaceOrthographicSize;
             m_Camera.nearClipPlane = clipOffset;
             m_Camera.farClipPlane = clipOffset + boundsInLightSpace.size.z;
             m_Camera.ResetProjectionMatrix();
 
             var obliqueBounds = VirtualShadowMapsUtilities.CalculateBoundingBox(m_Renderers, m_Camera);
-            obliqueBounds.min = new Vector3(bounds.min.x, obliqueBounds.min.y, bounds.min.z);
-            obliqueBounds.max = new Vector3(bounds.max.x, obliqueBounds.max.y, bounds.max.z);
+            var obliquePosition = new Vector3(0, obliqueBounds.max.y + clipOffset, 0);
+            var obliqueBoundsInLightSpace = obliqueBounds.CalclateFitScene(lightTransform.worldToLocalMatrix);
+            var obliqueBoundsInLightSpaceLocalPosition = new Vector3(boundsInLightSpace.center.x, boundsInLightSpace.center.y, obliqueBoundsInLightSpace.min.z - lightSpaceBounds.min.z);
 
-            var obliqueNormal = Vector3.up;
-            var obliquePosition = new Vector3(obliqueBounds.center.x, obliqueBounds.max.y, obliqueBounds.center.z) + obliqueNormal * clipOffset;
-            var obliqueSlope = 1 - Mathf.Clamp01(Vector3.Dot(-lightTransform.forward, obliqueNormal));
-            var obliqueBoundsInLightSpace = VirtualShadowMapsUtilities.CalclateFitScene(obliqueBounds, lightTransform.worldToLocalMatrix);
-            var obliqueBoundsInLightSpaceLocalPosition = new Vector3(obliqueBoundsInLightSpace.center.x, obliqueBoundsInLightSpace.center.y, obliqueBoundsInLightSpace.min.z);
-            obliqueBoundsInLightSpaceLocalPosition += m_VirtualShadowMaps.TransformToLightSpace(lightTransform.forward * (obliqueBounds.size.y * obliqueSlope));
-
-            m_Camera.transform.localPosition = boundsInLightSpaceLocalPosition;
+            m_Camera.transform.localPosition = obliqueBoundsInLightSpaceLocalPosition;
             m_Camera.aspect = 1.0f;
             m_Camera.orthographicSize = boundsInLightSpaceOrthographicSize + 1;
             m_Camera.nearClipPlane = clipOffset;
-            m_Camera.farClipPlane = clipOffset + obliqueBounds.size.y + (obliqueBoundsInLightSpaceLocalPosition - boundsInLightSpaceLocalPosition).magnitude;
-            m_Camera.projectionMatrix = m_Camera.CalculateObliqueMatrix(VirtualShadowMapsUtilities.CameraSpacePlane(m_Camera, obliquePosition, obliqueNormal, -1.0f));
+            m_Camera.farClipPlane = clipOffset + obliqueBounds.size.y;
+            m_Camera.projectionMatrix = m_Camera.CalculateObliqueMatrix(VirtualShadowMapsUtilities.CameraSpacePlane(m_Camera, obliquePosition, Vector3.up, -1.0f));
 
             RenderTexture savedRT = RenderTexture.active;
 

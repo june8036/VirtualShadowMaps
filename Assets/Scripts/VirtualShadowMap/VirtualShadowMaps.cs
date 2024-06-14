@@ -60,15 +60,15 @@ namespace VirtualTexture
         public Material drawLookupMaterial;
 
         /// <summary>
-        /// 覆盖区域中心.
-        /// </summary>
-        [Space(10)]
-        public Vector3 regionCenter = Vector3.zero;
-
-        /// <summary>
         /// 覆盖区域大小.
         /// </summary>
+        [Space(10)]
         public int regionSize = 1024;
+
+        /// <summary>
+        /// 覆盖区域中心.
+        /// </summary>
+        public Vector3 regionCenter = Vector3.zero;
 
         /// <summary>
         /// 最大mipmap等级

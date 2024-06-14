@@ -15,7 +15,7 @@ namespace VirtualTexture
             return new Vector3(X, Y, Z);
         }
 
-        public static Bounds CalclateFitScene(Bounds bounds, Matrix4x4 worldToLocalMatrix)
+        public static Bounds CalclateFitScene(this Bounds bounds, Matrix4x4 worldToLocalMatrix)
         {
             var boundsInLightSpace = new Bounds();
             boundsInLightSpace.max = Vector3.negativeInfinity;
@@ -103,23 +103,6 @@ namespace VirtualTexture
                 if (renderer.gameObject.CompareTag(tag))
                     renderer.shadowCastingMode = ShadowCastingMode.Off;
             }
-        }
-
-        public static Bounds CalclateFitScene(Bounds bounds, Matrix4x4 worldToLocalMatrix)
-        {
-            var boundsInLightSpace = new Bounds();
-            boundsInLightSpace.max = Vector3.negativeInfinity;
-            boundsInLightSpace.min = Vector3.positiveInfinity;
-
-            for (var i = 0; i < 8; i++)
-            {
-                Vector3 corner = bounds.GetCorner(i);
-                Vector3 localPosition = worldToLocalMatrix.MultiplyPoint(corner);
-                
-                boundsInLightSpace.Encapsulate(localPosition);
-            }
-
-            return boundsInLightSpace;
         }
 
         public static float CalculateBiasScale(float orthographicSize, int tileSize)
