@@ -320,7 +320,7 @@ namespace VirtualTexture
             GeometryUtility.CalculateFrustumPlanes(GetCamera(), m_CullingPlanes);
 
             var lightTransform = m_VirtualShadowMaps.GetLightTransform();
-            var lightSpaceBounds = m_VirtualShadowMaps.shadowData.bounds.CalclateFitScene(lightTransform.worldToLocalMatrix);
+            var lightSpaceBounds = m_WorldBounding.CalclateFitScene(lightTransform.worldToLocalMatrix);
             var lightSpaceMin = new Vector3(lightSpaceBounds.min.x, lightSpaceBounds.min.y, 0);
             var lightSpaceRight = new Vector3(lightSpaceBounds.max.x, lightSpaceBounds.min.y, 0);
             var lightSpaceBottom = new Vector3(lightSpaceBounds.min.x, lightSpaceBounds.max.y, 0);
