@@ -319,8 +319,17 @@ namespace VirtualTexture
         {
             GeometryUtility.CalculateFrustumPlanes(GetCamera(), m_CullingPlanes);
 
-            var lightTransform = m_VirtualShadowMaps.GetLightTransform();
-            var lightSpaceBounds = m_WorldBounding.CalclateFitScene(lightTransform.worldToLocalMatrix);
+            var localToWorldMatrix = m_VirtualShadowMaps.shadowData ? 
+                m_VirtualShadowMaps.shadowData.localToWorldMatrix : 
+                m_VirtualShadowMaps.GetLightTransform().localToWorldMatrix;
+
+            var worldToLocalMatrix = m_VirtualShadowMaps.shadowData ? 
+                m_VirtualShadowMaps.shadowData.worldToLocalMatrix : 
+                m_VirtualShadowMaps.GetLightTransform().worldToLocalMatrix;
+
+            var lightSpaceCameraPos = worldToLocalMatrix.MultiplyPoint(m_CameraTransform.position);
+
+            var lightSpaceBounds = m_WorldBounding.CalclateFitScene(worldToLocalMatrix);
             var lightSpaceMin = new Vector3(lightSpaceBounds.min.x, lightSpaceBounds.min.y, 0);
             var lightSpaceRight = new Vector3(lightSpaceBounds.max.x, lightSpaceBounds.min.y, 0);
             var lightSpaceBottom = new Vector3(lightSpaceBounds.min.x, lightSpaceBounds.max.y, 0);
@@ -334,8 +343,8 @@ namespace VirtualTexture
                 var mipScale = 1 << level;
                 var pageSize = m_VirtualTexture.pageSize / mipScale;
 
-                var cellWidth = lightSpaceWidth / m_VirtualShadowMaps.pageSize * mipScale;
-                var cellHeight = lightSpaceHeight / m_VirtualShadowMaps.pageSize * mipScale;
+                var cellWidth = lightSpaceWidth / m_VirtualTexture.pageSize * mipScale;
+                var cellHeight = lightSpaceHeight / m_VirtualTexture.pageSize * mipScale;
                 var cellSize = Mathf.Max(cellWidth, cellHeight);
                 var cellSize2 = cellSize * cellSize;
 
@@ -346,14 +355,25 @@ namespace VirtualTexture
                     for (int x = 0; x < pageSize; x++)
                     {
                         var thisPos = lightSpaceAxisX * (x + 0.5f) * cellWidth + posY;
-                        var worldPos = m_VirtualShadowMaps.TransformToWorldSpace(thisPos);
-                        var estimate = Vector3.SqrMagnitude(worldPos - m_CameraTransform.position) / cellSize2;
+                        var estimate = Vector3.SqrMagnitude(thisPos - lightSpaceCameraPos) / cellSize2;
 
                         if (estimate < levelOfDetail)
                         {
+                            var worldPos = localToWorldMatrix.MultiplyPoint(thisPos);
                             var bound = new Bounds(worldPos, new Vector3(cellWidth, cellSize, cellHeight));
                             if (GeometryUtility.TestPlanesAABB(m_CullingPlanes, bound))
-                                m_VirtualTexture.LoadPage(x, y, level);
+                            {
+                                if (m_VirtualShadowMaps.shadowData != null)
+                                {
+                                    var key = m_VirtualShadowMaps.shadowData.GetTexAsset(x, y, level);
+                                    if (key != null)
+                                        m_VirtualTexture.LoadPage(x, y, level);
+                                }
+                                else
+                                {
+                                    m_VirtualTexture.LoadPage(x, y, level);
+                                }
+                            }
                         }
                     }
                 }

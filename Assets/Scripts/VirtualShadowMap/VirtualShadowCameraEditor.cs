@@ -35,7 +35,7 @@ namespace VirtualTexture
                 this.Repaint();
             }
 
-            if (GUILayout.Button("Refresh"))
+            if (GUILayout.Button("Rebuild"))
             {
                 m_VirtualShadowMaps.ResetShadowMaps();
             }

@@ -27,6 +27,8 @@ namespace VirtualTexture
             m_VirtualShadowData.maxMipLevel = m_VirtualShadowMaps.maxMipLevel;
             m_VirtualShadowData.maxResolution = m_VirtualShadowMaps.maxResolution;
             m_VirtualShadowData.bounds = m_VirtualShadowMaps.CalculateBoundingBox();
+            m_VirtualShadowData.worldToLocalMatrix = m_VirtualShadowMaps.GetLightTransform().worldToLocalMatrix;
+            m_VirtualShadowData.localToWorldMatrix = m_VirtualShadowMaps.GetLightTransform().localToWorldMatrix;
 
             var pageTable = new PageTable(m_VirtualShadowMaps.pageSize, m_VirtualShadowMaps.maxMipLevel);
 

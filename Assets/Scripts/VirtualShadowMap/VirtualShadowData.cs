@@ -44,6 +44,18 @@ namespace VirtualTexture
         public Bounds bounds;
 
         /// <summary>
+        /// 光源变换矩阵.
+        /// </summary>
+        [SerializeField]
+        public Matrix4x4 worldToLocalMatrix;
+
+        /// <summary>
+        /// 光源变换矩阵.
+        /// </summary>
+        [SerializeField]
+        public Matrix4x4 localToWorldMatrix;
+
+        /// <summary>
         /// 阴影投影矩阵列表.
         /// </summary>
         [SerializeField]
@@ -89,6 +101,24 @@ namespace VirtualTexture
                 if (pair.Key.pageX == request.pageX &&
                     pair.Key.pageY == request.pageY &&
                     pair.Key.mipLevel == request.mipLevel)
+                {
+                    return pair.Value;
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// 查找纹理资源
+        /// </summary>
+        public string GetTexAsset(int x, int y, int mipLevel)
+        {
+            foreach (var pair in texAssets)
+            {
+                if (pair.Key.pageX == x &&
+                    pair.Key.pageY == y &&
+                    pair.Key.mipLevel == mipLevel)
                 {
                     return pair.Value;
                 }
