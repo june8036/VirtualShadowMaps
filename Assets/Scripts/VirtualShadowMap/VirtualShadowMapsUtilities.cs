@@ -79,6 +79,17 @@ namespace VirtualTexture
             return aabb;
         }
 
+        public static float LightSpaceDistance(Vector3 pos, Vector3 normal, Vector3 origion, Vector3 direction)
+        {
+            Plane pane = new Plane(normal, pos);
+            Ray ray = new Ray(origion, direction);
+
+            pane.Raycast(ray, out var enter);
+            var point = ray.GetPoint(enter);
+
+            return (ray.origin - point).magnitude;
+        }
+
         public static Vector4 CameraSpacePlane(Camera cam, Vector3 pos, Vector3 normal, float sideSign)
         {
             Matrix4x4 m = cam.worldToCameraMatrix;
