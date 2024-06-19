@@ -35,7 +35,7 @@ namespace VirtualTexture
 
     public static class VirtualShadowMapsUtilities
     {
-        public static Bounds CalculateBoundingBox(List<MeshRenderer> renderers)
+        public static Bounds CalculateBoundingBox(List<Renderer> renderers)
         {
             Bounds aabb = new Bounds();
             aabb.max = Vector3.negativeInfinity;
@@ -47,7 +47,7 @@ namespace VirtualTexture
             return aabb;
         }
 
-        public static Bounds CalculateBoundingBox(List<MeshRenderer> renderers, Camera camera)
+        public static Bounds CalculateBoundingBox(List<Renderer> renderers, Camera camera)
         {
             var planes = GeometryUtility.CalculateFrustumPlanes(camera);
 

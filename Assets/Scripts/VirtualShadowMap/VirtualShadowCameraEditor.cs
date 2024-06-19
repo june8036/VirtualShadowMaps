@@ -13,7 +13,7 @@ namespace VirtualTexture
         {
             base.OnInspectorGUI();
 
-            var tileTexture = m_VirtualShadowMaps.GetTileTexture();
+            var tileTexture = m_VirtualShadowMaps.GetTexture();
             if (tileTexture)
             {
                 GUILayout.Label("Tile Texture");

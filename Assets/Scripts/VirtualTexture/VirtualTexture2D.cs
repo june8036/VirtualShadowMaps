@@ -1,17 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Rendering;
 
 namespace VirtualTexture
 {
     public sealed class VirtualTexture2D : IDisposable
     {
-        /// <summary>
-        /// Lookup索引更新
-        /// </summary>
-        private CommandBuffer m_CommandBuffer;
-
         /// <summary>
         /// RT Job对象
         /// </summary>
@@ -40,7 +34,7 @@ namespace VirtualTexture
         /// <summary>
         /// 当前帧激活的Page列表
         /// </summary>
-        private List<DrawPageInfo> m_DrawList = new List<DrawPageInfo>();
+        private List<DrawPageInfo> m_Pages = new List<DrawPageInfo>();
 
         /// <summary>
         /// 当前帧激活的Tiled索引
@@ -51,11 +45,6 @@ namespace VirtualTexture
         /// 当前帧激活的Tiled矩阵
         /// </summary>
         private Matrix4x4[] m_TiledMatrixs;
-
-        /// <summary>
-        /// Indirect Property Block
-        /// </summary>
-        private MaterialPropertyBlock m_PropertyBlock = new MaterialPropertyBlock();
 
         /// <summary>
         /// 单个Tile的尺寸.
@@ -88,6 +77,16 @@ namespace VirtualTexture
         /// </summary>
         public int maxPageLevel { get { return m_PageTable.maxMipLevel; } }
 
+        /// <summary>
+        /// 当前帧激活的Tiled索引
+        /// </summary>
+        public Vector4[] tiledIndex { get { return m_TiledIndex; } }
+
+        /// <summary>
+        /// 当前帧激活的Tiled矩阵
+        /// </summary>
+        public Matrix4x4[] tiledMatrixs { get { return m_TiledMatrixs; } }
+
         private struct DrawPageInfo
         {
             public Rect rect;
@@ -98,12 +97,7 @@ namespace VirtualTexture
 
         public VirtualTexture2D(int tileSize, int tilingCount, VirtualTextureFormat[] formats, int pageSize, int maxLevel)
         {
-            InitializeQuadMesh();
-
             m_RequestPageJob = new RequestPageDataJob();
-
-            m_CommandBuffer = new CommandBuffer();
-            m_CommandBuffer.name = "VirtualTexture.Render";
 
             m_PageTable = new PageTable(pageSize, maxLevel);
             m_TileTexture = new TiledTexture(tileSize, tilingCount, formats);
@@ -307,13 +301,11 @@ namespace VirtualTexture
             });
         }
 
-        public void UpdateLookup(Material material)
+        public void UpdateLookup()
         {
-            Debug.Assert(material != null);
-
             var currentFrame = Time.frameCount;
 
-            m_DrawList.Clear();
+            m_Pages.Clear();
 
             foreach (var kv in m_PageTable.activePages)
             {
@@ -328,7 +320,7 @@ namespace VirtualTexture
 
                 var tileIndex = m_TileTexture.IdToPos(page.payload.tileIndex);
 
-                m_DrawList.Add(new DrawPageInfo()
+                m_Pages.Add(new DrawPageInfo()
                 {
                     rect = new Rect(lb.x, lb.y, rect.width, rect.height),
                     x = tileIndex.x,
@@ -337,30 +329,19 @@ namespace VirtualTexture
                 });
             }
 
-            m_CommandBuffer.Clear();
-            m_CommandBuffer.SetRenderTarget(m_LookupTexture, RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store);
-            m_CommandBuffer.ClearRenderTarget(true, true, Color.clear);
-
-            if (m_DrawList.Count > 0)
+            if (m_Pages.Count > 0)
             {
-                m_DrawList.Sort((a, b) => { return -a.mip.CompareTo(b.mip); });
+                m_Pages.Sort((a, b) => { return -a.mip.CompareTo(b.mip); });
 
-                for (int i = 0; i < m_DrawList.Count; i++)
+                for (int i = 0; i < m_Pages.Count; i++)
                 {
-                    var size = m_DrawList[i].rect.width / pageSize;
-                    var position = new Vector3(m_DrawList[i].rect.x / pageSize, m_DrawList[i].rect.y / pageSize);
+                    var size = m_Pages[i].rect.width / pageSize;
+                    var position = new Vector3(m_Pages[i].rect.x / pageSize, m_Pages[i].rect.y / pageSize);
 
-                    m_TiledIndex[i] = new Vector4(m_DrawList[i].x, m_DrawList[i].y, m_DrawList[i].mip, 1 << m_DrawList[i].mip);
+                    m_TiledIndex[i] = new Vector4(m_Pages[i].x, m_Pages[i].y, m_Pages[i].mip, 1 << m_Pages[i].mip);
                     m_TiledMatrixs[i] = Matrix4x4.TRS(position, Quaternion.identity, new Vector3(size, size, size));
                 }
-
-                m_PropertyBlock.Clear();
-                m_PropertyBlock.SetVectorArray("_TiledIndex", m_TiledIndex);
-
-                m_CommandBuffer.DrawMeshInstanced(m_QuadMesh, 0, material, 0, m_TiledMatrixs, m_DrawList.Count, m_PropertyBlock);
             }
-
-            Graphics.ExecuteCommandBuffer(m_CommandBuffer);
         }
 
         public void Clear()
@@ -377,9 +358,6 @@ namespace VirtualTexture
 
             m_LookupTexture?.Release();
             m_LookupTexture = null;
-
-            m_CommandBuffer?.Release();
-            m_CommandBuffer = null;
 
             m_RequestPageJob?.Clear();
             m_PageTable?.InvalidatePages();

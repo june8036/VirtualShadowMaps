@@ -336,13 +336,16 @@ namespace VirtualTexture
             return m_LightTransform.localToWorldMatrix.MultiplyPoint(localPos);
         }
 
-        public List<MeshRenderer> GetRenderers()
+        public List<Renderer> GetRenderers()
         {
             var camera = GetCamera();
-            var renderers = new List<MeshRenderer>();
+            var renderers = new List<Renderer>();
 
             foreach (var renderer in GameObject.FindObjectsOfType<MeshRenderer>())
             {
+                if (renderer.gameObject.GetComponentInParent<LODGroup>())
+                    continue;
+
                 var layerTest = ((1 << renderer.gameObject.layer) & camera.cullingMask) > 0;
                 if (renderer.gameObject.isStatic && layerTest)
                 {
@@ -352,6 +355,29 @@ namespace VirtualTexture
                         {
                             if (meshFilter.sharedMesh != null && renderer.sharedMaterial != null)
                                 renderers.Add(renderer);
+                        }
+                    }
+                }
+            }
+
+            foreach (var lodGroup in GameObject.FindObjectsOfType<LODGroup>())
+            {
+                var lods = lodGroup.GetLODs();
+                if (lods.Length > 0)
+                {
+                    foreach (var renderer in lods[0].renderers)
+                    {
+                        if (renderer == null)
+                            continue;
+
+                        var layerTest = ((1 << renderer.gameObject.layer) & camera.cullingMask) > 0;
+                        if (renderer.gameObject.isStatic && layerTest)
+                        {
+                            if (renderer.TryGetComponent<MeshFilter>(out var meshFilter))
+                            {
+                                if (meshFilter.sharedMesh != null && renderer.sharedMaterial != null)
+                                    renderers.Add(renderer);
+                            }
                         }
                     }
                 }

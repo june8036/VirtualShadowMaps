@@ -16,7 +16,7 @@ namespace VirtualTexture
         /// <summary>
         /// 渲染的静态物体
         /// </summary>
-        private List<MeshRenderer> m_Renderers;
+        private List<Renderer> m_Renderers;
 
         /// <summary>
         /// 投影着色器
