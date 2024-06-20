@@ -32,10 +32,18 @@ float4 _VirtualShadowFeedbackParams;
 
 // x = depth bias
 // y = normal bias
+// z = light size
 float4 _VirtualShadowBiasParams;
+
+// x = search radius
+// y = light size
+float4 _VirtualShadowPcssParams;
 
 // WorldToLocalMatrix
 float4x4 _VirtualShadowLightMatrix;
+
+// WorldToPorjiectionMatrix
+float4x4 _VirtualShadowLightProjectionMatrix;
 
 #if USE_STRUCTURED_BUFFER_FOR_VIRTUAL_SHADOW_MAPS
 StructuredBuffer<float4x4> _VirtualShadowMatrixs_SSBO;
@@ -51,6 +59,39 @@ TEXTURE2D_SHADOW(_VirtualShadowTileTexture);
 SAMPLER_CMP(sampler_VirtualShadowTileTexture);
 
 float4 _VirtualShadowTileTexture_TexelSize;
+
+SamplerState sampler_point_clamp;
+
+#define SHADOW_POISSON_COUNT 25
+
+static const float2 Poisson[SHADOW_POISSON_COUNT] =
+{
+	float2(-0.978698, -0.0884121),
+	float2(-0.841121, 0.521165),
+	float2(-0.71746, -0.50322),
+	float2(-0.702933, 0.903134),
+	float2(-0.663198, 0.15482),
+	float2(-0.495102, -0.232887),
+	float2(-0.364238, -0.961791),
+	float2(-0.345866, -0.564379),
+	float2(-0.325663, 0.64037),
+	float2(-0.182714, 0.321329),
+	float2(-0.142613, -0.0227363),
+	float2(-0.0564287, -0.36729),
+	float2(-0.0185858, 0.918882),
+	float2(0.0381787, -0.728996),
+	float2(0.16599, 0.093112),
+	float2(0.253639, 0.719535),
+	float2(0.369549, -0.655019),
+	float2(0.423627, 0.429975),
+	float2(0.530747, -0.364971),
+	float2(0.566027, -0.940489),
+	float2(0.639332, 0.0284127),
+	float2(0.652089, 0.669668),
+	float2(0.773797, 0.345012),
+	float2(0.968871, 0.840449),
+	float2(0.991882, -0.657338)
+};
 
 int GetPageIndex(float4 page)
 {
@@ -242,6 +283,112 @@ float SampleVirtualShadowMap_PCF5x5(float4 coord, float2 receiverPlaneDepthBias)
 #else
 	return shadow;
 #endif
+}
+
+float2 VirtialShadowMapsVogelDiskSampleDir(int sampleIndex, int samplesCount, float phi)
+{
+	//float phi = 3.14159265359f;//UNITY_PI;
+	float GoldenAngle = 2.4f;
+
+	//float r = sqrt(sampleIndex + 0.5f) / sqrt(samplesCount);
+	float r = sqrt(sampleIndex + 0.5f) / sqrt(samplesCount);
+	float theta = sampleIndex * GoldenAngle + phi;
+
+	float sine, cosine;
+	sincos(theta, sine, cosine);
+
+	return float2(r * cosine, r * sine);
+}
+
+float VirtialShadowMapsGetDithering(float2 xy)
+{
+	float2 pos = frac(xy / 128.0f) * 128.0f + float2(-64.340622f, -72.465622f);
+	return frac(dot(pos.xyx * pos.xyy, float3(20.390625f, 60.703125f, 2.4281209f)));
+}
+
+float2 VirtualShadowMapsBlockerSearch(float3 shadowCoord, float serachRadius, float2 tileBegin, float2 tileEnd, float2 rotation)
+{
+	float blockerSum = 0.0;
+	float numBlockers = 0;
+
+	for (int i = 0; i < SHADOW_POISSON_COUNT; i++)
+	{
+		float2 pos = Poisson[i];
+		float2 samples = float2(pos.x * rotation.x - pos.y * rotation.y, pos.y * rotation.x + pos.x * rotation.y);
+
+		float2 offset = samples * serachRadius;
+		float3 biasedCoords = float3(shadowCoord.xy + offset, shadowCoord.z);
+		biasedCoords.xy = clamp(biasedCoords.xy, tileBegin, tileEnd);
+
+		float shadowMapDepth = SAMPLE_TEXTURE2D_LOD(_VirtualShadowTileTexture, sampler_point_clamp, biasedCoords.xy, 0).r;
+
+#if defined(UNITY_REVERSED_Z)
+		float sum = shadowMapDepth >= biasedCoords.z;
+		blockerSum += shadowMapDepth * sum;
+		numBlockers += sum;
+#else
+		float sum = shadowMapDepth <= biasedCoords.z;
+		blockerSum += shadowMapDepth * sum;
+		numBlockers += sum;
+#endif
+	}
+
+	float avgBlockerDepth = blockerSum / numBlockers;
+
+#if defined(UNITY_REVERSED_Z)
+	avgBlockerDepth = 1.0 - avgBlockerDepth;
+#endif
+
+	return float2(avgBlockerDepth, numBlockers);
+}
+
+float SampleVirtualShadowMap_PCSS(float3 worldPos, float3 normalWS)
+{
+	float2 uv = ComputeLookupTexcoord(worldPos);
+	float4 page = SampleLookupPage(uv);
+	float2 tileBegin = ComputeTileCoordFromPage(page.xy, 0);
+	float2 tileEnd = ComputeTileCoordFromPage(page.xy, 1.0f);
+	float3 shadowCoord = GetVirtualShadowTexcoord(worldPos, normalWS);
+
+	float angle = VirtialShadowMapsGetDithering(shadowCoord.xy * 1000)* PI * 2;
+
+	float2 rotation = float2(cos(angle), sin(angle));
+	float2 blockerResults = VirtualShadowMapsBlockerSearch(shadowCoord, _VirtualShadowPcssParams.x / page.w, tileBegin, tileEnd, rotation);
+
+	if (blockerResults.y == 0.0)
+		return 1.0;
+
+	float total = 0;
+
+#if defined(UNITY_REVERSED_Z)
+	float penumbraRatio = ((1.0 - shadowCoord.z) - blockerResults.x) / (1 - blockerResults.x);
+#else
+	float penumbraRatio = (shadowCoord.z - blockerResults.x) / blockerResults.x;
+#endif
+
+#if USE_STRUCTURED_BUFFER_FOR_VIRTUAL_SHADOW_MAPS
+	float4 ndcpos = mul(_VirtualShadowMatrixs_SSBO[0], float4(worldPos, 1));
+#else
+	float4 ndcpos = mul(_VirtualShadowMatrixs[0], float4(worldPos, 1));
+#endif
+
+	float filterSize = max(_VirtualShadowTileTexture_TexelSize.x * 2, _VirtualShadowPcssParams.y * penumbraRatio / ndcpos.z);
+
+	for (int i = 0; i < SHADOW_POISSON_COUNT; i++)
+	{
+		float2 offset = VirtialShadowMapsVogelDiskSampleDir(i, SHADOW_POISSON_COUNT, angle) * filterSize;
+		float3 biasedCoords = float3(shadowCoord.xy + offset, shadowCoord.z);
+		biasedCoords.xy = clamp(biasedCoords.xy, tileBegin, tileEnd);
+
+		float shadow = SAMPLE_TEXTURE2D_SHADOW(_VirtualShadowTileTexture, sampler_VirtualShadowTileTexture, biasedCoords);
+		total += shadow;
+	}
+
+#if defined(SHADER_API_GLCORE) || defined(SHADER_API_GLES) || defined(SHADER_API_GLES3)
+	return 1.0f - total / SHADOW_POISSON_COUNT;
+#else
+	return total / SHADOW_POISSON_COUNT;
+#endif	
 }
 
 #endif
