@@ -79,7 +79,7 @@ namespace VirtualTexture
             return aabb;
         }
 
-        public static float LightSpaceDistance(Vector3 pos, Vector3 normal, Vector3 origion, Vector3 direction)
+        public static float CameraSpaceDistance(Vector3 pos, Vector3 normal, Vector3 origion, Vector3 direction)
         {
             Plane pane = new Plane(normal, pos);
             Ray ray = new Ray(origion, direction);

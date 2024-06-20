@@ -89,12 +89,12 @@ namespace VirtualTexture
             var cellCenter = lightSpaceMin + lightSpaceAxisX * cellWidth * (x + 0.5f) + lightSpaceAxisY * cellHeight * (y + 0.5f);
             var cellPos = lightTransform.localToWorldMatrix.MultiplyPoint(cellCenter);
 
-            var boundsInLightSpaceOrthographicSize = Mathf.Max(cellWidth, cellHeight) * 0.5f;
+            var boundsInLightSpaceOrthographicSize = Mathf.Max(cellWidth, cellHeight) * 0.5f + 5;
             var boundsInLightSpaceLocalPosition = new Vector3(cellCenter.x, cellCenter.y, cellCenter.z - clipOffset);
 
             m_Camera.transform.localPosition = boundsInLightSpaceLocalPosition;
             m_Camera.aspect = 1.0f;
-            m_Camera.orthographicSize = boundsInLightSpaceOrthographicSize + 2;
+            m_Camera.orthographicSize = boundsInLightSpaceOrthographicSize;
             m_Camera.nearClipPlane = clipOffset;
             m_Camera.farClipPlane = clipOffset + lightSpaceBounds.size.z;
             m_Camera.ResetProjectionMatrix();
@@ -102,13 +102,13 @@ namespace VirtualTexture
             var obliqueBounds = VirtualShadowMapsUtilities.CalculateBoundingBox(m_Renderers, m_Camera);
             var obliquePosition = new Vector3(0, obliqueBounds.max.y + clipOffset, 0);
             var obliquePosition2 = new Vector3(0, obliqueBounds.min.y, 0);
-            var obliqueDistance = VirtualShadowMapsUtilities.LightSpaceDistance(obliquePosition, Vector3.up, cellPos, lightTransform.forward);
+            var obliqueDistance = VirtualShadowMapsUtilities.CameraSpaceDistance(obliquePosition, Vector3.up, cellPos, lightTransform.forward);
 
             m_Camera.transform.localPosition = boundsInLightSpaceLocalPosition + lightTransform.worldToLocalMatrix.MultiplyVector(lightTransform.forward) * obliqueDistance;
             m_Camera.aspect = 1.0f;
-            m_Camera.orthographicSize = boundsInLightSpaceOrthographicSize + 2;
+            m_Camera.orthographicSize = boundsInLightSpaceOrthographicSize;
             m_Camera.nearClipPlane = clipOffset;
-            m_Camera.farClipPlane = clipOffset + VirtualShadowMapsUtilities.LightSpaceDistance(obliquePosition2, Vector3.up, m_Camera.transform.position, lightTransform.forward);
+            m_Camera.farClipPlane = clipOffset + VirtualShadowMapsUtilities.CameraSpaceDistance(obliquePosition2, Vector3.up, m_Camera.transform.position, lightTransform.forward);
             m_Camera.projectionMatrix = m_Camera.CalculateObliqueMatrix(VirtualShadowMapsUtilities.CameraSpacePlane(m_Camera, obliquePosition, Vector3.up, -1.0f));
 
             RenderTexture savedRT = RenderTexture.active;
@@ -116,7 +116,8 @@ namespace VirtualTexture
             Graphics.SetRenderTarget(m_StaticShadowMap);
             GL.Clear(true, true, Color.black);
             GL.LoadIdentity();
-            GL.LoadProjectionMatrix(m_Camera.projectionMatrix * m_Camera.worldToCameraMatrix);
+            GL.modelview = m_Camera.worldToCameraMatrix;
+            GL.LoadProjectionMatrix(m_Camera.projectionMatrix);
 
             var planes = GeometryUtility.CalculateFrustumPlanes(m_Camera);
 
@@ -124,8 +125,16 @@ namespace VirtualTexture
             {
                 if (GeometryUtility.TestPlanesAABB(planes, it.bounds))
                 {
-                    m_Material.CopyPropertiesFromMaterial(it.sharedMaterial);
-                    m_Material.SetPass(0);
+                    var pass = it.sharedMaterial.FindPass("VirtualShadowCaster");
+                    if (pass >= 0)
+                    {
+                        it.sharedMaterial.SetPass(pass);
+                    }
+                    else
+                    {
+                        m_Material.CopyPropertiesFromMaterial(it.sharedMaterial);
+                        m_Material.SetPass(0);
+                    }
 
                     if (it.TryGetComponent<MeshFilter>(out var meshFilter))
                         Graphics.DrawMeshNow(meshFilter.sharedMesh, it.localToWorldMatrix);

@@ -312,24 +312,24 @@ namespace VirtualTexture
         {
             GeometryUtility.CalculateFrustumPlanes(GetCamera(), m_CullingPlanes);
 
-            var localToWorldMatrix = m_VirtualShadowMaps.shadowData ?
-                m_VirtualShadowMaps.shadowData.localToWorldMatrix :
-                m_VirtualShadowMaps.GetLightTransform().localToWorldMatrix;
-
             var worldToLocalMatrix = m_VirtualShadowMaps.shadowData ?
                 m_VirtualShadowMaps.shadowData.worldToLocalMatrix :
                 m_VirtualShadowMaps.GetLightTransform().worldToLocalMatrix;
 
-            var lightSpaceCameraPos = worldToLocalMatrix.MultiplyPoint(m_CameraTransform.position);
-
             var lightSpaceBounds = m_BoundsInLightSpace[m_VirtualTexture.maxPageLevel];
-            var lightSpaceMin = new Vector3(lightSpaceBounds.min.x, lightSpaceBounds.min.y, 0);
-            var lightSpaceRight = new Vector3(lightSpaceBounds.max.x, lightSpaceBounds.min.y, 0);
-            var lightSpaceBottom = new Vector3(lightSpaceBounds.min.x, lightSpaceBounds.max.y, 0);
+            var lightSpaceMin = new Vector3(lightSpaceBounds.min.x, lightSpaceBounds.min.y, lightSpaceBounds.min.z);
+            var lightSpaceRight = new Vector3(lightSpaceBounds.max.x, lightSpaceBounds.min.y, lightSpaceBounds.min.z);
+            var lightSpaceBottom = new Vector3(lightSpaceBounds.min.x, lightSpaceBounds.max.y, lightSpaceBounds.min.z);
             var lightSpaceAxisX = Vector3.Normalize(lightSpaceRight - lightSpaceMin);
             var lightSpaceAxisY = Vector3.Normalize(lightSpaceBottom - lightSpaceMin);
             var lightSpaceWidth = (lightSpaceRight - lightSpaceMin).magnitude;
             var lightSpaceHeight = (lightSpaceBottom - lightSpaceMin).magnitude;
+
+            var lightSpaceCameraPos = worldToLocalMatrix.MultiplyPoint(m_CameraTransform.position);
+            lightSpaceCameraPos.z = lightSpaceBounds.min.z;
+
+            var lightSpaceCameraVector = worldToLocalMatrix.MultiplyVector(m_CameraTransform.forward);
+            lightSpaceCameraVector.z = 0;
 
             for (int level = 0; level <= m_VirtualTexture.maxPageLevel; level++)
             {
@@ -341,6 +341,8 @@ namespace VirtualTexture
                 var cellSize = Mathf.Max(cellWidth, cellHeight);
                 var cellSize2 = cellSize * cellSize;
 
+                var lightSpaceCameraRect = new Rect(lightSpaceCameraPos.x, lightSpaceCameraPos.y, cellWidth * levelOfDetail, cellHeight * levelOfDetail);
+
                 for (int y = 0; y < pageSize; y++)
                 {
                     var posY = lightSpaceMin + lightSpaceAxisY * (y + 0.5f) * cellHeight;
@@ -348,14 +350,13 @@ namespace VirtualTexture
                     for (int x = 0; x < pageSize; x++)
                     {
                         var thisPos = lightSpaceAxisX * (x + 0.5f) * cellWidth + posY;
-                        thisPos.z = lightSpaceCameraPos.z;
-
                         var estimate = Vector3.SqrMagnitude(thisPos - lightSpaceCameraPos) / cellSize2;
                         if (estimate < levelOfDetail)
                         {
-                            var worldPos = localToWorldMatrix.MultiplyPoint(thisPos);
-                            var bound = new Bounds(worldPos, new Vector3(cellWidth, m_Bounds.size.y, cellHeight));
-                            if (GeometryUtility.TestPlanesAABB(m_CullingPlanes, bound))
+                            var rect = new Rect(new Vector2(thisPos.x, thisPos.y), new Vector2(cellWidth, cellHeight));
+                            var angle = Vector3.Dot(lightSpaceCameraVector, (thisPos - lightSpaceCameraPos).normalized);
+
+                            if (rect.Overlaps(lightSpaceCameraRect) || angle > 0.0f)
                             {
                                 if (m_VirtualShadowMaps.shadowData != null)
                                 {
@@ -478,6 +479,9 @@ namespace VirtualTexture
                 var regionRange = new Rect(lightSpaceBounds.min.x, lightSpaceBounds.min.y, lightSpaceBounds.size.x, lightSpaceBounds.size.y);
                 var worldToLocalMatrix = m_VirtualShadowMaps.shadowData ? m_VirtualShadowMaps.shadowData.worldToLocalMatrix : m_VirtualShadowMaps.GetLightTransform().worldToLocalMatrix;
 
+                var serachRadius = m_VirtualShadowMaps.serachRadius / m_VirtualTexture.tileSize * (1 << m_VirtualTexture.maxPageLevel);
+                var lightSize = m_VirtualShadowMaps.lightSize / m_VirtualTexture.tileSize;
+
                 m_CameraCommandBuffer.Clear();
                 m_CameraCommandBuffer.SetGlobalMatrix(ShaderConstants._VirtualShadowLightMatrix, worldToLocalMatrix);
                 m_CameraCommandBuffer.SetGlobalVector(ShaderConstants._VirtualShadowBiasParams, new Vector4(m_VirtualShadowMaps.bias * biasScale, m_VirtualShadowMaps.normalBias * biasScale * 1.414f, distanceShadowMask ? 1 : 0, 0));
@@ -485,6 +489,7 @@ namespace VirtualTexture
                 m_CameraCommandBuffer.SetGlobalVector(ShaderConstants._VirtualShadowPageParams, new Vector4(m_VirtualTexture.pageSize, 1.0f / m_VirtualTexture.pageSize, m_VirtualTexture.maxPageLevel, 0));
                 m_CameraCommandBuffer.SetGlobalVector(ShaderConstants._VirtualShadowTileParams, new Vector4(m_VirtualTexture.tileSize, m_VirtualTexture.tilingCount, m_VirtualTexture.textireSize, 0));
                 m_CameraCommandBuffer.SetGlobalVector(ShaderConstants._VirtualShadowFeedbackParams, new Vector4(m_VirtualTexture.pageSize, m_VirtualTexture.pageSize * m_VirtualTexture.tileSize * m_RegionChangeScale.ToFloat(), m_VirtualTexture.maxPageLevel, 0));
+                m_CameraCommandBuffer.SetGlobalVector(ShaderConstants._VirtualShadowPcssParams, new Vector4(serachRadius, lightSize, 0, 0));
 
                 m_CameraCommandBuffer.SetGlobalTexture(ShaderConstants._VirtualShadowTileTexture, m_VirtualTexture.GetTexture(0));
                 m_CameraCommandBuffer.SetGlobalTexture(ShaderConstants._VirtualShadowLookupTexture, m_VirtualTexture.GetLookupTexture());
@@ -588,6 +593,7 @@ namespace VirtualTexture
             public static readonly int _VirtualShadowMatrixs_SSBO = Shader.PropertyToID("_VirtualShadowMatrixs_SSBO");
             public static readonly int _VirtualShadowLightMatrix = Shader.PropertyToID("_VirtualShadowLightMatrix");
             public static readonly int _VirtualShadowBiasParams = Shader.PropertyToID("_VirtualShadowBiasParams");
+            public static readonly int _VirtualShadowPcssParams = Shader.PropertyToID("_VirtualShadowPcssParams");
             public static readonly int _VirtualShadowRegionParams = Shader.PropertyToID("_VirtualShadowRegionParams");
             public static readonly int _VirtualShadowPageParams = Shader.PropertyToID("_VirtualShadowPageParams");
             public static readonly int _VirtualShadowTileParams = Shader.PropertyToID("_VirtualShadowTileParams");

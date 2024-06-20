@@ -96,6 +96,19 @@ namespace VirtualTexture
         public float normalBias = 0.4f;
 
         /// <summary>
+        /// PCSS light size
+        /// </summary>
+        [Space(10)]
+        [Range(0, 5)]
+        public float lightSize = 1;
+
+        /// <summary>
+        /// PCSS Blocker radius
+        /// </summary>
+        [Range(0, 2)]
+        public float serachRadius = 1;
+
+        /// <summary>
         /// 用于流式加载的数据
         /// </summary>
         [Space(10)]
