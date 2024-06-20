@@ -105,7 +105,7 @@ namespace VirtualTexture
         /// <summary>
         /// PCSS Blocker radius
         /// </summary>
-        [Range(0, 2)]
+        [Range(0, 1)]
         public float serachRadius = 1;
 
         /// <summary>

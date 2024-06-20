@@ -479,8 +479,9 @@ namespace VirtualTexture
                 var regionRange = new Rect(lightSpaceBounds.min.x, lightSpaceBounds.min.y, lightSpaceBounds.size.x, lightSpaceBounds.size.y);
                 var worldToLocalMatrix = m_VirtualShadowMaps.shadowData ? m_VirtualShadowMaps.shadowData.worldToLocalMatrix : m_VirtualShadowMaps.GetLightTransform().worldToLocalMatrix;
 
-                var serachRadius = m_VirtualShadowMaps.serachRadius / m_VirtualTexture.tileSize * (1 << m_VirtualTexture.maxPageLevel);
-                var lightSize = m_VirtualShadowMaps.lightSize / m_VirtualTexture.tileSize;
+                var scaleBias = Mathf.Max(lightSpaceBounds.size.x, lightSpaceBounds.size.y);
+                var serachRadius = m_VirtualShadowMaps.serachRadius / (scaleBias * biasScale) * (1 << m_VirtualTexture.maxPageLevel);
+                var lightSize = m_VirtualShadowMaps.lightSize / (scaleBias * biasScale);
 
                 m_CameraCommandBuffer.Clear();
                 m_CameraCommandBuffer.SetGlobalMatrix(ShaderConstants._VirtualShadowLightMatrix, worldToLocalMatrix);
