@@ -481,7 +481,7 @@ namespace VirtualTexture
 
                 var scaleBias = Mathf.Max(lightSpaceBounds.size.x, lightSpaceBounds.size.y);
                 var serachRadius = m_VirtualShadowMaps.serachRadius / (scaleBias * biasScale) * (1 << m_VirtualTexture.maxPageLevel);
-                var lightSize = m_VirtualShadowMaps.lightSize / (scaleBias * biasScale);
+                var lightSize = m_VirtualShadowMaps.lightSize / m_VirtualTexture.textireSize;
 
                 m_CameraCommandBuffer.Clear();
                 m_CameraCommandBuffer.SetGlobalMatrix(ShaderConstants._VirtualShadowLightMatrix, worldToLocalMatrix);

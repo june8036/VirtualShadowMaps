@@ -355,8 +355,10 @@ float SampleVirtualShadowMap_PCSS(float3 worldPos, float3 normalWS)
 	float2 rotation = float2(cos(angle), sin(angle));
 	float2 blockerResults = VirtualShadowMapsBlockerSearch(shadowCoord, _VirtualShadowPcssParams.x / page.w, tileBegin, tileEnd, rotation);
 
-	if (blockerResults.y == 0.0)
+	if (blockerResults.y < 0.1f)
 		return 1.0;
+	else if (blockerResults.y >= SHADOW_POISSON_COUNT)
+		return 0.0f;
 
 	float total = 0;
 

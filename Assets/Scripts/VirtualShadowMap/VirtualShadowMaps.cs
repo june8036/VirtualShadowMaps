@@ -99,7 +99,7 @@ namespace VirtualTexture
         /// PCSS light size
         /// </summary>
         [Space(10)]
-        [Range(0, 5)]
+        [Range(0, 50)]
         public float lightSize = 1;
 
         /// <summary>
