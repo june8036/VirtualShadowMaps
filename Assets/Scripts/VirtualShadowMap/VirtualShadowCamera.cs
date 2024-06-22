@@ -574,9 +574,9 @@ namespace VirtualTexture
             if (VirtualShadowMaps.useStructuredBuffer)
                 m_CommandBuffer.SetBufferData(m_LightProjecionMatrixBuffer, m_LightProjecionMatrixs);
             else
-                m_CommandBuffer.SetGlobalMatrixArray("_VirtualShadowMatrixs", m_LightProjecionMatrixs);
+                m_CommandBuffer.SetGlobalMatrixArray(ShaderConstants._VirtualShadowMatrixs, m_LightProjecionMatrixs);
 
-            m_CommandBuffer.SetGlobalTexture("_MainTex", m_VirtualShadowMaps.GetCameraTexture());
+            m_CommandBuffer.SetGlobalTexture(ShaderConstants._MainTex, m_VirtualShadowMaps.GetCameraTexture());
             m_CommandBuffer.SetRenderTarget(m_VirtualTexture.GetTexture(0));
             m_CommandBuffer.DrawMesh(m_TileMesh, m_VirtualTexture.GetMatrix(tile), m_VirtualShadowMaps.drawTileMaterial, 0);
 

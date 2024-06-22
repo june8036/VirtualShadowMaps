@@ -24,7 +24,7 @@
                 case ShadowResolution._2048:
                     return 2048;
                 case ShadowResolution._4096:
-                    return 2096;
+                    return 4096;
             }
             return 1;
         }
