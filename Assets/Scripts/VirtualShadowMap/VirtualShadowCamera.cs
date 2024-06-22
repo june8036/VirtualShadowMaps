@@ -20,7 +20,17 @@ namespace VirtualTexture
         /// <summary>
         /// 用于开启VSM功能的关键字
         /// </summary>
+        private readonly string m_VirtualShadowMapsPcssKeyword = "_VIRTUAL_SHADOW_MAPS_PCSS";
+
+        /// <summary>
+        /// 用于开启VSM功能的关键字
+        /// </summary>
         private GlobalKeyword m_VirtualShadowMapsKeywordFeature;
+
+        /// <summary>
+        /// 用于开启VSM功能的关键字
+        /// </summary>
+        private GlobalKeyword m_VirtualShadowMapsPcssKeywordFeature;
 
         /// <summary>
         /// 场景包围体
@@ -31,11 +41,6 @@ namespace VirtualTexture
         /// 灯光空间场景包围体
         /// </summary>
         private Bounds[] m_BoundsInLightSpace;
-
-        /// <summary>
-        /// 优先加载可见的Page
-        /// </summary>
-        private Plane[] m_CullingPlanes = new Plane[6];
 
         /// <summary>
         /// 当前场景的烘焙数据
@@ -161,6 +166,7 @@ namespace VirtualTexture
         public void OnEnable()
         {
             m_VirtualShadowMapsKeywordFeature = GlobalKeyword.Create(m_VirtualShadowMapsKeyword);
+            m_VirtualShadowMapsPcssKeywordFeature = GlobalKeyword.Create(m_VirtualShadowMapsPcssKeyword);
 
             var tilingCount = Mathf.ClosestPowerOfTwo(Mathf.CeilToInt(Mathf.Sqrt(m_MaxTilePool)));
 
@@ -310,8 +316,6 @@ namespace VirtualTexture
 
         private void UpdatePage()
         {
-            GeometryUtility.CalculateFrustumPlanes(GetCamera(), m_CullingPlanes);
-
             var worldToLocalMatrix = m_VirtualShadowMaps.shadowData ?
                 m_VirtualShadowMaps.shadowData.worldToLocalMatrix :
                 m_VirtualShadowMaps.GetLightTransform().worldToLocalMatrix;
@@ -478,10 +482,7 @@ namespace VirtualTexture
                 var distanceShadowMask = QualitySettings.shadowmaskMode == ShadowmaskMode.DistanceShadowmask ? true : false;
                 var regionRange = new Rect(lightSpaceBounds.min.x, lightSpaceBounds.min.y, lightSpaceBounds.size.x, lightSpaceBounds.size.y);
                 var worldToLocalMatrix = m_VirtualShadowMaps.shadowData ? m_VirtualShadowMaps.shadowData.worldToLocalMatrix : m_VirtualShadowMaps.GetLightTransform().worldToLocalMatrix;
-
-                var scaleBias = Mathf.Max(lightSpaceBounds.size.x, lightSpaceBounds.size.y);
-                var serachRadius = m_VirtualShadowMaps.serachRadius / (scaleBias * biasScale) * (1 << m_VirtualTexture.maxPageLevel);
-                var lightSize = m_VirtualShadowMaps.lightSize / m_VirtualTexture.textireSize;
+                var softness = m_VirtualShadowMaps.softnesss / m_VirtualTexture.textireSize * (1 << m_VirtualTexture.maxPageLevel);
 
                 m_CameraCommandBuffer.Clear();
                 m_CameraCommandBuffer.SetGlobalMatrix(ShaderConstants._VirtualShadowLightMatrix, worldToLocalMatrix);
@@ -490,7 +491,7 @@ namespace VirtualTexture
                 m_CameraCommandBuffer.SetGlobalVector(ShaderConstants._VirtualShadowPageParams, new Vector4(m_VirtualTexture.pageSize, 1.0f / m_VirtualTexture.pageSize, m_VirtualTexture.maxPageLevel, 0));
                 m_CameraCommandBuffer.SetGlobalVector(ShaderConstants._VirtualShadowTileParams, new Vector4(m_VirtualTexture.tileSize, m_VirtualTexture.tilingCount, m_VirtualTexture.textireSize, 0));
                 m_CameraCommandBuffer.SetGlobalVector(ShaderConstants._VirtualShadowFeedbackParams, new Vector4(m_VirtualTexture.pageSize, m_VirtualTexture.pageSize * m_VirtualTexture.tileSize * m_RegionChangeScale.ToFloat(), m_VirtualTexture.maxPageLevel, 0));
-                m_CameraCommandBuffer.SetGlobalVector(ShaderConstants._VirtualShadowPcssParams, new Vector4(serachRadius, lightSize, 0, 0));
+                m_CameraCommandBuffer.SetGlobalVector(ShaderConstants._VirtualShadowPcssParams, new Vector4(softness, m_VirtualShadowMaps.softnessNear, m_VirtualShadowMaps.softnessFar, 0));
 
                 m_CameraCommandBuffer.SetGlobalTexture(ShaderConstants._VirtualShadowTileTexture, m_VirtualTexture.GetTexture(0));
                 m_CameraCommandBuffer.SetGlobalTexture(ShaderConstants._VirtualShadowLookupTexture, m_VirtualTexture.GetLookupTexture());

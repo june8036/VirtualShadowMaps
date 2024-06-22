@@ -1,9 +1,5 @@
 ﻿Shader "Hidden/Virtual Texture/Draw Tile"
 {
-	Properties
-	{
-		_MainTex ("Texture", 2D) = "white" {}
-	}
 	CGINCLUDE
 		#include "UnityCG.cginc"
    
@@ -24,14 +20,17 @@
 		Varyings vert (Attributes v)
 		{
 			Varyings o;
-			o.vertex = UnityObjectToClipPos(v.vertex);
+#if UNITY_UV_STARTS_AT_TOP
+			v.vertex.y = 1 - v.vertex.y;
+#endif
+			o.vertex = float4(mul(unity_ObjectToWorld, v.vertex).xyz, 1);
 			o.uv = v.uv;
 			return o;
 		}
 		
-		float4 frag(Varyings i) : SV_TARGET
+		float4 frag(Varyings i) : SV_Target
 		{
-			return UNITY_SAMPLE_TEX2D_SAMPLER_LOD(_MainTex, _MainTex, i.uv, 0).r;
+			return UNITY_SAMPLE_TEX2D_SAMPLER(_MainTex, _MainTex, i.uv);
 		}
 	ENDCG
 	SubShader

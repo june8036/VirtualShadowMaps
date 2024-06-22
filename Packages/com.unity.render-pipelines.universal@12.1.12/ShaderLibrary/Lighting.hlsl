@@ -271,7 +271,10 @@ half4 UniversalFragmentPBR(InputData inputData, SurfaceData surfaceData)
     Light mainLight = GetMainLight(inputData, shadowMask, aoFactor);
 
     #ifdef _VIRTUAL_SHADOW_MAPS
-    float virtualShadow = SampleVirtualShadowMap_PCSS(inputData.positionWS, inputData.normalWS);
+    float4 clipsPos = TransformWorldToHClip(inputData.positionWS);
+    float4 scrPos = ComputeScreenPos(clipsPos);
+    float angle = InterleavedGradientNoise(scrPos.xy / scrPos.w);
+    float virtualShadow = SampleVirtualShadowMap_PCSS(inputData.positionWS, inputData.normalWS, angle);
     mainLight.shadowAttenuation = min(mainLight.shadowAttenuation, virtualShadow);
     #endif
 

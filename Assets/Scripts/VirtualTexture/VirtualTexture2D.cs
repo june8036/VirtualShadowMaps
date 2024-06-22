@@ -27,11 +27,6 @@ namespace VirtualTexture
         private RenderTexture m_LookupTexture;
 
         /// <summary>
-        /// 平面网格
-        /// </summary>
-        private Mesh m_QuadMesh;
-
-        /// <summary>
         /// 当前帧激活的Page列表
         /// </summary>
         private List<DrawPageInfo> m_Pages = new List<DrawPageInfo>();
@@ -109,35 +104,6 @@ namespace VirtualTexture
             m_LookupTexture.name = "LookupTexture";
             m_LookupTexture.filterMode = FilterMode.Point;
             m_LookupTexture.wrapMode = TextureWrapMode.Clamp;
-        }
-
-        private void InitializeQuadMesh()
-        {
-            List<Vector3> quadVertexList = new List<Vector3>();
-            List<int> quadTriangleList = new List<int>();
-            List<Vector2> quadUVList = new List<Vector2>();
-
-            quadVertexList.Add(new Vector3(0, 1, 0.1f));
-            quadUVList.Add(new Vector2(0, 1));
-            quadVertexList.Add(new Vector3(0, 0, 0.1f));
-            quadUVList.Add(new Vector2(0, 0));
-            quadVertexList.Add(new Vector3(1, 0, 0.1f));
-            quadUVList.Add(new Vector2(1, 0));
-            quadVertexList.Add(new Vector3(1, 1, 0.1f));
-            quadUVList.Add(new Vector2(1, 1));
-
-            quadTriangleList.Add(0);
-            quadTriangleList.Add(1);
-            quadTriangleList.Add(2);
-
-            quadTriangleList.Add(2);
-            quadTriangleList.Add(3);
-            quadTriangleList.Add(0);
-
-            m_QuadMesh = new Mesh();
-            m_QuadMesh.SetVertices(quadVertexList);
-            m_QuadMesh.SetUVs(0, quadUVList);
-            m_QuadMesh.SetTriangles(quadTriangleList, 0);
         }
 
         public RenderTexture GetTexture(int index)

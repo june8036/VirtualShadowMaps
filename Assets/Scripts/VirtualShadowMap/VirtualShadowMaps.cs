@@ -96,17 +96,28 @@ namespace VirtualTexture
         public float normalBias = 0.4f;
 
         /// <summary>
-        /// PCSS light size
+        /// PCSS enable
         /// </summary>
         [Space(10)]
-        [Range(0, 50)]
-        public float lightSize = 1;
+        public bool pcssFilter = true;
 
         /// <summary>
-        /// PCSS Blocker radius
+        /// PCSS filter radius
         /// </summary>
         [Range(0, 1)]
-        public float serachRadius = 1;
+        public float softnesss = 0.5f;
+
+        /// <summary>
+        /// PCSS filter near
+        /// </summary>
+        [Range(0, 2)]
+        public float softnessNear = 0.2f;
+
+        /// <summary>
+        /// PCSS filter far
+        /// </summary>
+        [Range(0, 2)]
+        public float softnessFar = 1.0f;
 
         /// <summary>
         /// 用于流式加载的数据
@@ -200,28 +211,6 @@ namespace VirtualTexture
         public void OnDestroy()
         {
             DestroyCameraTexture();
-        }
-
-        public void Reset()
-        {
-            this.m_Camera = GetCamera();
-            
-            this.maxMipLevel = 4;
-            this.maxResolution = ShadowResolution._1024;
-            this.bias = 0.05f;
-            this.normalBias = 0.4f;
-
-            this.shadowData = null;
-
-            this.castMaterial = null;
-            this.drawTileMaterial = null;
-            this.drawLookupMaterial = null;
-
-            this.CalculateRegionBox();
-
-#if UNITY_EDITOR
-            EditorUtility.SetDirty(this);
-#endif
         }
 
 #if UNITY_EDITOR
@@ -339,16 +328,6 @@ namespace VirtualTexture
             return m_LightTransform;
         }
 
-        public Vector3 TransformToLightSpace(Vector3 worldPos)
-        {
-            return m_LightTransform.worldToLocalMatrix.MultiplyPoint(worldPos);
-        }
-
-        public Vector3 TransformToWorldSpace(Vector3 localPos)
-        {
-            return m_LightTransform.localToWorldMatrix.MultiplyPoint(localPos);
-        }
-
         public List<Renderer> GetRenderers()
         {
             var camera = GetCamera();
@@ -427,6 +406,26 @@ namespace VirtualTexture
                         camera.gameObject.AddComponent<VirtualShadowCamera>();
                 }
             }
+        }
+
+        public void Reset()
+        {
+            this.m_Camera = GetCamera();
+
+            this.maxMipLevel = 4;
+            this.maxResolution = ShadowResolution._1024;
+            this.bias = 0.05f;
+            this.normalBias = 0.4f;
+
+            this.shadowData = null;
+
+            this.castMaterial = null;
+            this.drawTileMaterial = null;
+            this.drawLookupMaterial = null;
+
+            this.CalculateRegionBox();
+
+            EditorUtility.SetDirty(this);
         }
 
         public void OnValidate()
