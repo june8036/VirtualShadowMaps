@@ -21,6 +21,10 @@ MonoBehaviour:
     m_Address: Assets/Demo/VirtualShadowMaps_Shadow
     m_ReadOnly: 0
     m_SerializedLabels: []
+  - m_GUID: 3d0f017e4b3b54b488c6100f4820f267
+    m_Address: Assets/Demo/VirtualShadowMaps_Material
+    m_ReadOnly: 0
+    m_SerializedLabels: []
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: 91084dddd67382b408b47181fbb85436, type: 2}
   m_SchemaSet:

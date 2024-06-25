@@ -125,9 +125,9 @@ Shader "Universal Render Pipeline/Lit"
             #pragma multi_compile_fragment _ _LIGHT_COOKIES
             #pragma multi_compile _ _CLUSTERED_RENDERING
             #pragma multi_compile _ _VIRTUAL_SHADOW_MAPS
+            #pragma multi_compile _ _VIRTUAL_MATERIAL_MAPS
 
             // -------------------------------------
-            // Unity defined keywords
             #pragma multi_compile _ LIGHTMAP_SHADOW_MIXING
             #pragma multi_compile _ SHADOWS_SHADOWMASK
             #pragma multi_compile _ DIRLIGHTMAP_COMBINED
