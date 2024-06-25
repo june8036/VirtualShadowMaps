@@ -48,7 +48,7 @@ namespace VirtualTexture
             {
                 for (var i = 0; i < totalRequestCount; i++)
                 {
-                    var request = requestPageJob.First();
+                    var request = requestPageJob.First().Value;
                     var pageName = request.mipLevel + "-" + request.pageX + "-" + request.pageY;
                     var outpath = Path.Join(fileroot, sceneName, "ShadowTexBytes-" + pageName + ".exr");
 

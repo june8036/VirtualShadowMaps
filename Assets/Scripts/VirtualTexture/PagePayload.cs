@@ -20,7 +20,7 @@
         /// <summary>
         /// 渲染请求
         /// </summary>
-		public RequestPageData loadRequest;
+		public RequestPageData? loadRequest;
 
         /// <summary>
         /// 是否处于可用状态

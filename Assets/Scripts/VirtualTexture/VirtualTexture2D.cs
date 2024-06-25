@@ -201,7 +201,7 @@ namespace VirtualTexture
             {
                 if (page.payload.loadRequest != null)
                 {
-                    m_RequestPageJob.Remove(page.payload.loadRequest);
+                    m_RequestPageJob.Remove(page.payload.loadRequest.Value);
                     page.payload.loadRequest = null;
                 }
 
@@ -224,7 +224,7 @@ namespace VirtualTexture
             return m_RequestPageJob.requestCount;
         }
 
-        public RequestPageData FirstRequest()
+        public RequestPageData? FirstRequest()
         {
             return m_RequestPageJob.First();
         }
@@ -244,7 +244,7 @@ namespace VirtualTexture
             var page = m_PageTable.GetPage(req.pageX, req.pageY, req.mipLevel);
             if (page != null)
             {
-                if (page.payload.loadRequest == req)
+                if (page.payload.loadRequest.Equals(req))
                 {
                     m_RequestPageJob.Remove(req);
                     page.payload.loadRequest = null;
@@ -261,7 +261,7 @@ namespace VirtualTexture
                 var page = m_PageTable.GetPage(req.pageX, req.pageY, req.mipLevel);
                 if (page != null)
                 {
-                    if (page.payload.loadRequest == req)
+                    if (page.payload.loadRequest.Equals(req))
                         page.payload.loadRequest = null;
                 }
             });

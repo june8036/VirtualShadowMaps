@@ -68,6 +68,12 @@ namespace VirtualTexture
         public SerializableDictionary<RequestPageData, string> texAssets = new SerializableDictionary<RequestPageData, string>();
 
         /// <summary>
+        /// 每一个Tile覆盖的世界包围体.
+        /// </summary>
+        [SerializeField]
+        public SerializableDictionary<RequestPageData, Bounds> tileBounds = new SerializableDictionary<RequestPageData, Bounds>();
+
+        /// <summary>
         /// 资源数量.
         /// </summary>
         public int textureCount { get => texAssets.Count; }
@@ -148,6 +154,29 @@ namespace VirtualTexture
             }
 
             return Matrix4x4.identity;
+        }
+
+        /// <summary>
+        /// 设置纹理对应的投影矩阵
+        /// </summary>
+        public void SetBounds(RequestPageData request, Bounds bounds)
+        {
+            tileBounds.Add(request, bounds);
+        }
+
+        /// <summary>
+        /// 获取纹理对应的投影矩阵
+        /// </summary>
+        public Bounds GetBounds(int x, int y, int mip)
+        {
+            foreach (var pair in tileBounds)
+            {
+                var req = pair.Key;
+                if (req.pageX == x && req.pageY == y && req.mipLevel == mip)
+                    return pair.Value;
+            }
+
+            return new Bounds();
         }
 
         public KeyValuePair<Texture2D, int[]> Compress(Texture2D source)

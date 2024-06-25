@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using UnityEngine.Pool;
 
 namespace VirtualTexture
 {
@@ -13,11 +12,6 @@ namespace VirtualTexture
         public int requestCount { get => m_PendingRequests.Count; }
 
         /// <summary>
-        /// 请求池.
-        /// </summary>
-        private ObjectPool<RequestPageData> m_PendingRequestPool = new ObjectPool<RequestPageData>(() => { return new RequestPageData(); });
-
-        /// <summary>
         /// 等待处理的请求.
         /// </summary>
         private List<RequestPageData> m_PendingRequests = new List<RequestPageData>();
@@ -25,7 +19,7 @@ namespace VirtualTexture
         /// <summary>
         /// 获取第一个加载请求
         /// </summary>
-        public RequestPageData First()
+        public RequestPageData? First()
         {
             return m_PendingRequests.Count > 0 ? m_PendingRequests.First() : null;
         }
@@ -33,7 +27,7 @@ namespace VirtualTexture
         /// <summary>
         /// 搜索页面请求
         /// </summary>
-        public RequestPageData Find(int x, int y, int mip)
+        public RequestPageData? Find(int x, int y, int mip)
         {
             foreach (var req in m_PendingRequests)
             {
@@ -54,20 +48,19 @@ namespace VirtualTexture
                 throw new InvalidOperationException("Trying to release an object that has already been released to the pool.");
             }
 
-            m_PendingRequestPool.Release(req);
             m_PendingRequests.Remove(req);
         }
 
         /// <summary>
         /// 新建页面请求
         /// </summary>
-        public RequestPageData Request(int x, int y, int mip)
+        public RequestPageData? Request(int x, int y, int mip)
         {
             // 是否已经在请求队列中
             if (this.Find(x, y, mip) == null)
 			{
                 // 加入待处理列表
-                var request = m_PendingRequestPool.Get();
+                var request = new RequestPageData();
                 request.pageX = x;
                 request.pageY = y;
                 request.mipLevel = mip;
@@ -104,7 +97,6 @@ namespace VirtualTexture
         public void Clear()
         {
             m_PendingRequests.Clear();
-            m_PendingRequestPool.Clear();
         }
 
         /// <summary>
@@ -119,7 +111,6 @@ namespace VirtualTexture
             }
 
             m_PendingRequests.Clear();
-            m_PendingRequestPool.Clear();
         }
     }
 }

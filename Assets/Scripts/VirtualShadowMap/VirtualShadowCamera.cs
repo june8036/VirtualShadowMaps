@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
@@ -335,43 +336,41 @@ namespace VirtualTexture
             var lightSpaceCameraVector = worldToLocalMatrix.MultiplyVector(m_CameraTransform.forward);
             lightSpaceCameraVector.z = 0;
 
-            for (int level = 0; level <= m_VirtualTexture.maxPageLevel; level++)
+            var minPageLevel = 0;
+            var maxPageLevel = m_VirtualTexture.maxPageLevel + 1;
+
+            for (int level = minPageLevel; level < maxPageLevel; level++)
             {
                 var mipScale = 1 << level;
                 var pageSize = m_VirtualTexture.pageSize / mipScale;
 
-                var cellWidth = lightSpaceWidth / m_VirtualTexture.pageSize * mipScale;
-                var cellHeight = lightSpaceHeight / m_VirtualTexture.pageSize * mipScale;
-                var cellSize = Mathf.Max(cellWidth, cellHeight);
-                var cellSize2 = cellSize * cellSize;
+                var cellWidth = lightSpaceWidth / pageSize;
+                var cellHeight = lightSpaceHeight / pageSize;
+                var cellSize = new Vector2(cellWidth, cellHeight);
+                var cellSize2 = 1.0f / (cellSize.x * cellSize.y);
 
                 var lightSpaceCameraRect = new Rect(lightSpaceCameraPos.x, lightSpaceCameraPos.y, cellWidth * levelOfDetail, cellHeight * levelOfDetail);
 
                 for (int y = 0; y < pageSize; y++)
                 {
-                    var posY = lightSpaceMin + lightSpaceAxisY * (y + 0.5f) * cellHeight;
+                    var posY = lightSpaceMin + lightSpaceAxisY * ((y + 0.5f) * cellHeight);
 
                     for (int x = 0; x < pageSize; x++)
                     {
-                        var thisPos = lightSpaceAxisX * (x + 0.5f) * cellWidth + posY;
-                        var estimate = Vector3.SqrMagnitude(thisPos - lightSpaceCameraPos) / cellSize2;
+                        var thisPos = lightSpaceAxisX * ((x + 0.5f) * cellWidth) + posY;
+                        var estimate = Vector3.SqrMagnitude(thisPos - lightSpaceCameraPos) * cellSize2;
                         if (estimate < levelOfDetail)
                         {
-                            var rect = new Rect(new Vector2(thisPos.x, thisPos.y), new Vector2(cellWidth, cellHeight));
-                            var angle = Vector3.Dot(lightSpaceCameraVector, (thisPos - lightSpaceCameraPos).normalized);
-
-                            if (rect.Overlaps(lightSpaceCameraRect) || angle > 0.0f)
+                            var rect = new Rect(thisPos.x, thisPos.y, cellSize.x, cellSize.y);
+                            if (rect.Overlaps(lightSpaceCameraRect))
                             {
-                                if (m_VirtualShadowMaps.shadowData != null)
-                                {
-                                    var key = m_VirtualShadowMaps.shadowData.GetTexAsset(x, y, level);
-                                    if (key != null)
-                                        m_VirtualTexture.LoadPage(x, y, level);
-                                }
-                                else
-                                {
+                                m_VirtualTexture.LoadPage(x, y, level);
+                            }
+                            else
+                            {
+                                var angle = Vector3.Dot(lightSpaceCameraVector, (thisPos - lightSpaceCameraPos).normalized);
+                                if (angle > 0.0f)
                                     m_VirtualTexture.LoadPage(x, y, level);
-                                }
                             }
                         }
                     }
@@ -395,7 +394,7 @@ namespace VirtualTexture
                             if (handle.Status == AsyncOperationStatus.Succeeded && handle.Result != null)
                             {
                                 var page = m_VirtualTexture.GetPage(req.pageX, req.pageY, req.mipLevel);
-                                if (page != null && page.payload.loadRequest == req)
+                                if (page != null && page.payload.loadRequest.Equals(req))
                                 {
                                     var tile = m_VirtualTexture.RequestTile();
                                     if (this.OnBeginTileLoading(req, tile, handle.Result))
@@ -405,6 +404,10 @@ namespace VirtualTexture
                                 }
 
                                 Resources.UnloadAsset(handle.Result);
+                            }
+                            else
+                            {
+                                m_VirtualTexture.RemoveRequest(req);
                             }
 
                             Addressables.Release(handle);
@@ -417,7 +420,7 @@ namespace VirtualTexture
                         if (texture != null)
                         {
                             var page = m_VirtualTexture.GetPage(req.pageX, req.pageY, req.mipLevel);
-                            if (page != null && page.payload.loadRequest == req)
+                            if (page != null && page.payload.loadRequest.Equals(req))
                             {
                                 var tile = m_VirtualTexture.RequestTile();
                                 if (this.OnBeginTileLoading(req, tile, texture))
@@ -431,11 +434,15 @@ namespace VirtualTexture
                         Resources.UnloadAsset(texture);
                     }
                 }
+                else
+                {
+                    m_VirtualTexture.RemoveRequest(req);
+                }
             }
             else if (Application.isPlaying)
             {
                 var page = m_VirtualTexture.GetPage(req.pageX, req.pageY, req.mipLevel);
-                if (page != null && page.payload.loadRequest == req)
+                if (page != null && page.payload.loadRequest.Equals(req))
                 {
                     var tile = m_VirtualTexture.RequestTile();
 
@@ -457,7 +464,7 @@ namespace VirtualTexture
             {
                 var req = m_VirtualTexture.FirstRequest();
                 if (req != null)
-                    this.ProcessRequest(req, async);
+                    this.ProcessRequest(req.Value, async);
             }
         }
 
