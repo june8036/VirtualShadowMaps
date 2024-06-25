@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 1410fc502a92acd409f31900650c0ed9
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - feedbackMaterial: {fileID: 2100000, guid: 21a62c3206b03f446b04964307a838c9, type: 2}
+  - drawTileMaterial: {fileID: 2100000, guid: 6b1bbfff096f1eb46ba3b96ccec37510, type: 2}
+  - drawLookupMaterial: {fileID: 2100000, guid: e655606b7baea0b45a05e4fe404c42b2,
+      type: 2}
+  - lightData: {instanceID: 0}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
