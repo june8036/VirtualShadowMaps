@@ -70,6 +70,8 @@ namespace VirtualTexture
 
             EditorUtility.ClearProgressBar();
 
+            AssetDatabase.Refresh();
+
             virtualLightMapData.SetupTextureImporter();
             virtualLightMapData.SaveAs(Path.Join(fileroot, sceneName));
 

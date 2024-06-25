@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: edf0de7bb6a14774f81b5f20c0ff5325
+guid: da961ff299766e54eafbb0ad99dcdb0d
 TextureImporter:
   internalIDToNameTable: []
   externalObjects: {}
@@ -61,7 +61,7 @@ TextureImporter:
   maxTextureSizeSet: 0
   compressionQualitySet: 0
   textureFormatSet: 0
-  ignorePngGamma: 1
+  ignorePngGamma: 0
   applyGammaDecoding: 0
   cookieLightType: 0
   platformSettings:

@@ -275,7 +275,7 @@ namespace VirtualTexture
                 var page = it.Key;
                 var bounds = it.Value;
 
-                var cellSize = Mathf.Max(bounds.extents.x, bounds.extents.z);
+                var cellSize = Mathf.Max(bounds.size.x, bounds.size.z);
                 var cellSize2 = cellSize * cellSize;
 
                 var estimate = Vector3.SqrMagnitude(bounds.center - m_CameraTransform.position) / cellSize2;
