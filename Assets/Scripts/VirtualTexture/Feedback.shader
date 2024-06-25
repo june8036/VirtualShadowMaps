@@ -1,77 +1,58 @@
-﻿Shader "Virtual Texture/Feedback"
+﻿Shader "Hidden/Virtual Texture/Feedback"
 {
-    HLSLINCLUDE
-        #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+	CGINCLUDE
+		#include "UnityCG.cginc"
+   
+		struct Attributes
+		{
+			float4 vertex	: POSITION;
+			float2 uv		: TEXCOORD1;
+		};
 
-        TEXTURE2D_X(_MainTex);
-        SAMPLER(sampler_MainTex);
-        float4 _MainTex_TexelSize;
+		struct Varyings
+		{
+			float3 worldPos : TEXCOORD0;
+			float4 vertex	: SV_POSITION;
+		};
 
-        struct Attributes
-        {
-            float4 positionOS   : POSITION;
-            float2 uv           : TEXCOORD0;
-            uint   id           : SV_VERTEXID;
-            UNITY_VERTEX_INPUT_INSTANCE_ID
-        };
+		UNITY_DECLARE_TEX2D(_MainTex);
 
-        struct Varyings
-        {
-            float4 positionCS    : SV_POSITION;
-            float2 uv            : TEXCOORD0;
-            UNITY_VERTEX_OUTPUT_STEREO
-        };
+		Varyings vert (Attributes v)
+		{
+			Varyings o;
+#if UNITY_UV_STARTS_AT_TOP
+			v.uv.y = 1 - v.uv.y;
+#endif
+			o.vertex = float4(v.uv.xy * 2 - 1, 0, 1);
+			o.worldPos = mul(unity_ObjectToWorld, v.vertex).xyz;
+			return o;
+		}
+		
+		float4 frag(Varyings i) : SV_Target
+		{
+			return float4(i.worldPos, 1);
+		}
+	ENDCG
+	SubShader
+	{
+		Tags { "RenderType"="Opaque" }
+		LOD 100
 
-        float4 GetMaxFeedback(float2 uv, int count)
-        {
-            float4 col = float4(1, 1, 1, 1);
+		Pass
+		{
+			ZTest Always ZWrite On
+			Cull Off
+		 
+			CGPROGRAM
 
-            for (int y = 0; y < count; y++)
-            {
-                for (int x = 0; x < count; x++)
-                {
-                    float4 col1 = SAMPLE_TEXTURE2D_LOD(_MainTex, sampler_MainTex, uv + float2(_MainTex_TexelSize.x * x, _MainTex_TexelSize.y * y), 0);
-                    col = lerp(col, col1, step(col1.b, col.b));
-                }
-            }
+			#pragma prefer_hlslcc gles
+			#pragma exclude_renderers d3d11_9x
+			#pragma target 2.0
 
-            return col;
-        }
+			#pragma vertex vert
+			#pragma fragment frag
 
-        Varyings FeedbackVertex(uint id : SV_VERTEXID)
-        {
-            Varyings o;
-            o.uv = GetFullScreenTriangleTexCoord(id);
-            o.positionCS = GetFullScreenTriangleVertexPosition(id);
-
-            return o;
-        }
-
-        float4 FeedbackFragment(Varyings input) : SV_Target
-        {
-            return GetMaxFeedback(input.uv, 8);
-        }
-
-    ENDHLSL
-    SubShader
-    {
-        Pass
-        {
-            Name "Feedback"
-            Tags{"LightMode" = "Feedback"}
-
-            ZWrite On
-
-            HLSLPROGRAM
-
-            #pragma prefer_hlslcc gles
-            #pragma exclude_renderers d3d11_9x
-            #pragma target 2.0
-
-            #pragma vertex FeedbackVertex
-            #pragma fragment FeedbackFragment
-
-            ENDHLSL
-        }
-    }
+			ENDCG
+		}
+	}
 }
