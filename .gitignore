@@ -12,3 +12,8 @@
 /Temp
 /.vs
 /*.csproj
+/Assets/Bakery
+/Assets/Editor
+/Assets/Bakery.meta
+/Assets/Settings/BakeryProjectSettings.asset
+/Assets/Settings/BakeryProjectSettings.asset.meta
