@@ -208,7 +208,6 @@ namespace VirtualTexture
             File.WriteAllBytes(filePath, bytes);
 
             UnityEngine.Object.DestroyImmediate(texture);
-
             return true;
         }
 

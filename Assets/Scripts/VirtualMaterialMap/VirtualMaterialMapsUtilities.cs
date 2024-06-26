@@ -6,28 +6,42 @@ namespace VirtualTexture
 {
     public static class VirtualMaterialMapsUtilities
     {
-        public static bool SaveAsFile(RenderTexture renderTexture, string filePath)
-        {
-            RenderTexture savedRT = RenderTexture.active;
+		public static Texture2D BoxFilter(Texture2D texture2D)
+		{
+			var w = texture2D.width;
+			var h = texture2D.height;
+			var texture = new Texture2D(w, h, texture2D.format, false);
 
-            Graphics.SetRenderTarget(renderTexture);
+            for (int y = 0; y < texture2D.height; y++)
+			{
+				for (int x = 0; x < texture2D.width; x++)
+				{
+					Color color = Color.clear;
 
-            Texture2D texture = new Texture2D(renderTexture.width, renderTexture.height, TextureFormat.RGBAFloat, false);
-            texture.hideFlags = HideFlags.HideAndDontSave;
-            texture.ReadPixels(new Rect(0, 0, renderTexture.width, renderTexture.height), 0, 0, false);
-            texture.Apply();
+					int n = 0;
+					for (int dy = -1; dy <= 1; dy++)
+					{
+						int cy = y + dy;
+						for (int dx = -1; dx <= 1; dx++)
+						{
+							int cx = x + dx;
+							if (cx >= 0 && cx < w && cy >= 0 && cy < h)
+							{
+								var cur = texture2D.GetPixel(cx, cy);
+								if (cur != Color.clear)
+								{
+									color += cur;
+									n++;
+								}
+							}
+						}
+					}
 
-            Graphics.SetRenderTarget(savedRT);
+                    texture.SetPixel(x, y, color / n);
+				}
+			}
 
-            byte[] bytes = texture.EncodeToEXR(Texture2D.EXRFlags.CompressZIP);
-            File.WriteAllBytes(filePath, bytes);
-
-            if (Application.isEditor)
-                UnityEngine.Object.DestroyImmediate(texture);
-            else
-                UnityEngine.Object.Destroy(texture);
-
-            return true;
+			return texture;
         }
 
         public static Matrix4x4 GetTextureScaleMatrix()
