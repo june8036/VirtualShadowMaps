@@ -105,6 +105,8 @@ namespace VirtualTexture
                 Shader.DisableKeyword("EDITOR_VISUALIZATION");
 
                 Shader.SetGlobalInt("unity_VisualizationMode", 0);
+                Shader.SetGlobalFloat("unity_OneOverOutputBoost", 1);
+                Shader.SetGlobalFloat("unity_MaxOutputValue", 1);
 
                 Shader.SetGlobalVector("unity_LightmapST", it.lightmapScaleOffset);
                 Shader.SetGlobalVector("unity_DynamicLightmapST", it.lightmapScaleOffset);
