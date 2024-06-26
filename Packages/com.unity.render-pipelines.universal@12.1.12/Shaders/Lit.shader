@@ -126,6 +126,7 @@ Shader "Universal Render Pipeline/Lit"
             #pragma multi_compile _ _CLUSTERED_RENDERING
             #pragma multi_compile _ _VIRTUAL_SHADOW_MAPS
             #pragma multi_compile _ _VIRTUAL_MATERIAL_MAPS
+            #pragma multi_compile _ _VIRTUAL_MATERIAL_DEBUG
 
             // -------------------------------------
             #pragma multi_compile _ LIGHTMAP_SHADOW_MIXING

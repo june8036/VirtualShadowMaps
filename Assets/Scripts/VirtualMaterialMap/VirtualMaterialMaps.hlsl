@@ -53,10 +53,10 @@ float2 VirtualMaterialMaps_GetLookupCoord(float2 staticLightmapUV)
 	return (staticLightmapUV.xy - _VirtualMaterialRegionParams.xy) * _VirtualMaterialRegionParams.zw;
 }
 
-float2 VirtualMaterialMaps_SampleLookupPage(float2 uv)
+float4 VirtualMaterialMaps_SampleLookupPage(float2 uv)
 {
 	float2 uvInt = uv - frac(uv * _VirtualMaterialPageParams.x) * _VirtualMaterialPageParams.y;
-	float2 page = SAMPLE_TEXTURE2D_LOD(_VirtualMaterialLookupTexture, sampler_VirtualMaterialLookupTexture, uvInt, 0).xy;
+	float4 page = SAMPLE_TEXTURE2D_LOD(_VirtualMaterialLookupTexture, sampler_VirtualMaterialLookupTexture, uvInt, 0);
 	return page;
 }
 
@@ -68,12 +68,12 @@ float2 VirtualMaterialMaps_ComputeTileCoordFromPage(float2 page, float2 offset)
 float2 VirtualMaterialMaps_GetVirtualTexcoord(float2 staticLightmapUV)
 {
 	float2 uv = VirtualMaterialMaps_GetLookupCoord(staticLightmapUV);
-	float2 page = VirtualMaterialMaps_SampleLookupPage(uv);
+	float4 page = VirtualMaterialMaps_SampleLookupPage(uv);
 
 #if USE_STRUCTURED_BUFFER_FOR_VIRTUAL_SHADOW_MAPS
-	float4 crop = _VirtualMaterialMatrixs_SSBO[VirtualMaterialMaps_GetPageIndex(page)];
+	float4 crop = _VirtualMaterialMatrixs_SSBO[VirtualMaterialMaps_GetPageIndex(page.xy)];
 #else
-	float4 crop = _VirtualMaterialMatrixs[VirtualMaterialMaps_GetPageIndex(page)];
+	float4 crop = _VirtualMaterialMatrixs[VirtualMaterialMaps_GetPageIndex(page.xy)];
 #endif
 
 	staticLightmapUV -= crop.xy;
@@ -83,7 +83,7 @@ float2 VirtualMaterialMaps_GetVirtualTexcoord(float2 staticLightmapUV)
 	staticLightmapUV.y = 1 - staticLightmapUV.y;
 #endif
 
-	return VirtualMaterialMaps_ComputeTileCoordFromPage(page, staticLightmapUV);
+	return VirtualMaterialMaps_ComputeTileCoordFromPage(page.xy, staticLightmapUV);
 }
 
 float3 SampleVirtualMaterialMap(float2 staticLightmapUV)

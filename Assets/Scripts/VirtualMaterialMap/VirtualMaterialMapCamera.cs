@@ -113,11 +113,10 @@ namespace VirtualTexture
         }
 
         /// <summary>
-        /// Tile池.
+        /// 细分等级(数值越大加载的页表越多)
         /// </summary>
-        [SerializeField]
-        [Min(1)]
-        private int m_MaxTilePool = 64;
+        [Space(10)]
+        public bool debug = false;
 
         /// <summary>
         /// 细分等级(数值越大加载的页表越多)
@@ -129,8 +128,16 @@ namespace VirtualTexture
         /// <summary>
         /// 一帧最多处理几个
         /// </summary>
+        [Space(10)]
         [Range(0, 10)]
         public int maxPageRequestLimit = 1;
+
+        /// <summary>
+        /// Tile池.
+        /// </summary>
+        [SerializeField]
+        [Min(1)]
+        private int m_MaxTilePool = 64;
 
         public void Awake()
         {

@@ -14,7 +14,17 @@ namespace VirtualTexture
         /// <summary>
         /// 用于开启VSM功能的关键字
         /// </summary>
+        private static readonly string m_VirtualMaterialMapsDebugKeyword = "_VIRTUAL_MATERIAL_DEBUG";
+
+        /// <summary>
+        /// 用于开启VSM功能的关键字
+        /// </summary>
         private static GlobalKeyword m_VirtualMaterialMapsKeywordFeature;
+
+        /// <summary>
+        /// 用于开启VSM功能的关键字
+        /// </summary>
+        private static GlobalKeyword m_VirtualMaterialMapsDebugKeywordFeature;
 
         class VirtualLightPass : ScriptableRenderPass
         {
@@ -34,13 +44,14 @@ namespace VirtualTexture
                     if (VirtualMaterialMapsManager.instance.TryGetCamera(renderingData.cameraData.camera, out var VirtualLightCamera))
                     {
                         if (VirtualLightCamera.enabled)
-                        {
                             cmd.EnableKeyword(m_VirtualMaterialMapsKeywordFeature);
-                        }
                         else
-                        {
                             cmd.DisableKeyword(m_VirtualMaterialMapsKeywordFeature);
-                        }
+
+                        if (VirtualLightCamera.enabled && VirtualLightCamera.debug)
+                            cmd.EnableKeyword(m_VirtualMaterialMapsDebugKeywordFeature);
+                        else
+                            cmd.DisableKeyword(m_VirtualMaterialMapsDebugKeywordFeature);
                     }
                     else
                     {
@@ -62,6 +73,8 @@ namespace VirtualTexture
         public override void Create()
         {
             m_VirtualMaterialMapsKeywordFeature = GlobalKeyword.Create(m_VirtualMaterialMapsKeyword);
+            m_VirtualMaterialMapsDebugKeywordFeature = GlobalKeyword.Create(m_VirtualMaterialMapsDebugKeyword);
+
             m_VirtualMaterialPass = new VirtualLightPass(RenderPassEvent.BeforeRendering);
         }
 
