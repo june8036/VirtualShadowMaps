@@ -261,7 +261,7 @@ namespace VirtualTexture
         private void CreateVirtualShadowMaps()
         {
             var tilingCount = Mathf.ClosestPowerOfTwo(Mathf.CeilToInt(Mathf.Sqrt(m_MaxTilePool)));
-            var textureFormat = new VirtualTextureFormat[] { new VirtualTextureFormat(RenderTextureFormat.Shadowmap) };
+            var textureFormat = new VirtualTextureFormat[] { new VirtualTextureFormat(RenderTextureFormat.Shadowmap, FilterMode.Bilinear) };
 
             if (m_VirtualShadowMaps.shadowData != null)
             {
@@ -346,8 +346,8 @@ namespace VirtualTexture
 
                 var cellWidth = lightSpaceWidth / pageSize;
                 var cellHeight = lightSpaceHeight / pageSize;
-                var cellSize = new Vector2(cellWidth, cellHeight);
-                var cellSize2 = 1.0f / (cellSize.x * cellSize.y);
+                var cellSize = Mathf.Max(cellWidth, cellHeight);
+                var cellSize2 = 1.0f / (cellSize * cellSize);
 
                 var lightSpaceCameraRect = new Rect(lightSpaceCameraPos.x, lightSpaceCameraPos.y, cellWidth * levelOfDetail, cellHeight * levelOfDetail);
 
@@ -361,7 +361,7 @@ namespace VirtualTexture
                         var estimate = Vector3.SqrMagnitude(thisPos - lightSpaceCameraPos) * cellSize2;
                         if (estimate < levelOfDetail)
                         {
-                            var rect = new Rect(thisPos.x, thisPos.y, cellSize.x, cellSize.y);
+                            var rect = new Rect(thisPos.x, thisPos.y, cellSize, cellSize);
                             if (rect.Overlaps(lightSpaceCameraRect))
                             {
                                 m_VirtualTexture.LoadPage(x, y, level);
@@ -470,10 +470,11 @@ namespace VirtualTexture
 
         private void UpdateLookup()
         {
-            m_VirtualTexture.UpdateLookup();
-
-            m_PropertyBlock.Clear();
-            m_PropertyBlock.SetVectorArray(ShaderConstants._TiledIndex, m_VirtualTexture.tiledIndex);
+            if (m_VirtualTexture.UpdateLookup())
+            {
+                m_PropertyBlock.Clear();
+                m_PropertyBlock.SetVectorArray(ShaderConstants._TiledIndex, m_VirtualTexture.tiledIndex);
+            }
         }
 
         private void OnBeginCameraRendering(ScriptableRenderContext ctx, Camera camera)
@@ -508,16 +509,19 @@ namespace VirtualTexture
                 else
                     m_CameraCommandBuffer.SetGlobalMatrixArray(ShaderConstants._VirtualShadowMatrixs, m_LightProjecionMatrixs);
 
-                m_CameraCommandBuffer.SetRenderTarget(this.GetLookupTexture(), RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store);
-                m_CameraCommandBuffer.ClearRenderTarget(true, true, Color.clear);
-                m_CameraCommandBuffer.DrawMeshInstanced(
-                    fullscreenMesh,
-                    0,
-                    m_VirtualShadowMaps.drawLookupMaterial,
-                    0,
-                    m_VirtualTexture.tiledMatrixs,
-                    m_VirtualTexture.tiledMatrixs.Length,
-                    m_PropertyBlock);
+                if (m_VirtualTexture.isTiledDirty)
+                {
+                    m_CameraCommandBuffer.SetRenderTarget(this.GetLookupTexture(), RenderBufferLoadAction.Load, RenderBufferStoreAction.Store);
+                    m_CameraCommandBuffer.ClearRenderTarget(true, true, Color.clear);
+                    m_CameraCommandBuffer.DrawMeshInstanced(
+                        fullscreenMesh,
+                        0,
+                        m_VirtualShadowMaps.drawLookupMaterial,
+                        0,
+                        m_VirtualTexture.tiledMatrixs,
+                        m_VirtualTexture.tiledCount,
+                        m_PropertyBlock);
+                }
 
                 ctx.ExecuteCommandBuffer(m_CameraCommandBuffer);
             }

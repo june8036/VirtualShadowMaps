@@ -6,10 +6,12 @@ namespace VirtualTexture
 	{
 		public RenderTextureFormat format;
 		public RenderTextureReadWrite readWrite;
+        public FilterMode filterMode;
 
-        public VirtualTextureFormat(RenderTextureFormat format, RenderTextureReadWrite readWrite = RenderTextureReadWrite.Linear)
+        public VirtualTextureFormat(RenderTextureFormat format, FilterMode filterMode = FilterMode.Bilinear, RenderTextureReadWrite readWrite = RenderTextureReadWrite.Linear)
 		{
 			this.format = format;
+			this.filterMode = filterMode;
             this.readWrite = readWrite;
         }
     }

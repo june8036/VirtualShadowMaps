@@ -27,9 +27,19 @@ namespace VirtualTexture
         private RenderTexture m_LookupTexture;
 
         /// <summary>
+        /// 缓存历史帧计数
+        /// </summary>
+        private int m_FrameCount = 0;
+
+        /// <summary>
         /// 当前帧激活的Page列表
         /// </summary>
-        private List<DrawPageInfo> m_Pages = new List<DrawPageInfo>();
+        private List<Page> m_Pages = new List<Page>();
+
+        /// <summary>
+        /// 当前帧激活的Tile列表
+        /// </summary>
+        private List<Page> m_ActiveTiles = new List<Page>();
 
         /// <summary>
         /// 当前帧激活的Tiled索引
@@ -73,12 +83,22 @@ namespace VirtualTexture
         public int maxPageLevel { get { return m_PageTable.maxMipLevel; } }
 
         /// <summary>
-        /// 当前帧激活的Tiled索引
+        /// 判断是否需要重绘
+        /// </summary>
+        public bool isTiledDirty { get { return m_Pages.Count > 0; } }
+
+        /// <summary>
+        /// 当前激活的Tiled数量
+        /// </summary>
+        public int tiledCount { get { return m_ActiveTiles.Count; } }
+
+        /// <summary>
+        /// 当前激活的Tiled索引
         /// </summary>
         public Vector4[] tiledIndex { get { return m_TiledIndex; } }
 
         /// <summary>
-        /// 当前帧激活的Tiled矩阵
+        /// 当前激活的Tiled矩阵
         /// </summary>
         public Matrix4x4[] tiledMatrixs { get { return m_TiledMatrixs; } }
 
@@ -149,7 +169,7 @@ namespace VirtualTexture
                 }
                 else
                 {
-                    this.ActivatePage(page.payload.tileIndex, page);
+                    m_TileTexture.SetActive(page.payload.tileIndex);
                 }
 
                 return page;
@@ -267,47 +287,53 @@ namespace VirtualTexture
             });
         }
 
-        public void UpdateLookup()
+        public bool UpdateLookup()
         {
-            var currentFrame = Time.frameCount;
-
             m_Pages.Clear();
 
             foreach (var kv in m_PageTable.activePages)
             {
                 var page = kv.Value;
-                var rect = page.GetRect();
-                var table = m_PageTable.pageLevelTable[page.mipLevel];
-                var offset = table.pageOffset * table.perCellSize;
-                var lb = rect.position - offset;
+                if (page.payload.activeFrame < m_FrameCount)
+                    continue;
 
-                while (lb.x < 0) lb.x += pageSize;
-                while (lb.y < 0) lb.y += pageSize;
-
-                var tileIndex = m_TileTexture.IdToPos(page.payload.tileIndex);
-
-                m_Pages.Add(new DrawPageInfo()
-                {
-                    rect = new Rect(lb.x, lb.y, rect.width, rect.height),
-                    x = tileIndex.x,
-                    y = tileIndex.y,
-                    mip = page.mipLevel
-                });
+                m_Pages.Add(page);
             }
 
             if (m_Pages.Count > 0)
             {
-                m_Pages.Sort((a, b) => { return -a.mip.CompareTo(b.mip); });
+                m_ActiveTiles.Clear();
 
-                for (int i = 0; i < m_Pages.Count; i++)
+                foreach (var kv in m_PageTable.activePages)
+                    m_ActiveTiles.Add(kv.Value);
+
+                m_ActiveTiles.Sort((a, b) => { return -a.mipLevel.CompareTo(b.mipLevel); });
+
+                for (int i = 0; i < m_ActiveTiles.Count; i++)
                 {
-                    var size = m_Pages[i].rect.width / pageSize;
-                    var position = new Vector3(m_Pages[i].rect.x / pageSize, m_Pages[i].rect.y / pageSize);
+                    var page = m_ActiveTiles[i];
+                    var rect = page.GetRect();
+                    var table = m_PageTable.pageLevelTable[page.mipLevel];
+                    var offset = table.pageOffset * table.perCellSize;
+                    var lb = rect.position - offset;
 
-                    m_TiledIndex[i] = new Vector4(m_Pages[i].x, m_Pages[i].y, m_Pages[i].mip, 1 << m_Pages[i].mip);
+                    while (lb.x < 0) lb.x += pageSize;
+                    while (lb.y < 0) lb.y += pageSize;
+
+                    var tileRect = new Rect(lb.x, lb.y, rect.width, rect.height);
+                    var tileIndex = m_TileTexture.IdToPos(page.payload.tileIndex);
+
+                    var size = tileRect.width / pageSize;
+                    var position = new Vector3(tileRect.x / pageSize, tileRect.y / pageSize);
+
+                    m_TiledIndex[i] = new Vector4(tileIndex.x, tileIndex.y, page.mipLevel, 1 << page.mipLevel);
                     m_TiledMatrixs[i] = Matrix4x4.TRS(position, Quaternion.identity, new Vector3(size, size, size));
                 }
             }
+
+            m_FrameCount = Time.frameCount;
+
+            return m_Pages.Count > 0;
         }
 
         public void Clear()
