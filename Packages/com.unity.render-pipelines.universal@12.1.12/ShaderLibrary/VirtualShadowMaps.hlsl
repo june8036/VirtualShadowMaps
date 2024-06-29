@@ -62,10 +62,11 @@ float4 _VirtualShadowTileTexture_TexelSize;
 
 SamplerState sampler_point_clamp;
 
-#define VIRTUAL_SHADOW_MAPS_POISSON_COUNT 25
+#define VIRTUAL_SHADOW_MAPS_POISSON_COUNT 26
 
-static const float2 Poisson[25] =
+static const float2 Poisson[26] =
 {
+	float2( 0, 0),
 	float2(-0.978698, -0.0884121),
 	float2(-0.841121, 0.521165),
 	float2(-0.71746, -0.50322),

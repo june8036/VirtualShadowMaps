@@ -91,7 +91,7 @@ float3 SampleVirtualMaterialMap(float2 staticLightmapUV)
 #if _VIRTUAL_MATERIAL_DEBUG
 	float2 uv = VirtualMaterialMaps_GetLookupCoord(staticLightmapUV);
 	float4 page = VirtualMaterialMaps_SampleLookupPage(uv);
-	return page.xyz;
+	return page.xyz / _VirtualMaterialPageParams.z;
 #else
 	float2 coord = VirtualMaterialMaps_GetVirtualTexcoord(staticLightmapUV);
 	return SAMPLE_TEXTURE2D_LOD(_VirtualMaterialTileTexture, sampler_VirtualMaterialTileTexture, coord.xy, 0);
