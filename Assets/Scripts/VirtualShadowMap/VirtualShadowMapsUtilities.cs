@@ -175,5 +175,18 @@ namespace VirtualTexture
 
             return textureScaleAndBias * worldToShadow;
         }
+
+        public static Matrix4x4 GetTextureScaleAndBiasMatrix(Vector3 offset, Vector3 scale)
+        {
+            var textureScaleAndBias = Matrix4x4.identity;
+            textureScaleAndBias.m00 = scale.x;
+            textureScaleAndBias.m11 = scale.x;
+            textureScaleAndBias.m22 = scale.x;
+            textureScaleAndBias.m03 = offset.x;
+            textureScaleAndBias.m13 = offset.y;
+            textureScaleAndBias.m23 = offset.z;
+
+            return textureScaleAndBias;
+        }
     }
 }

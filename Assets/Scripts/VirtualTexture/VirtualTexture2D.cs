@@ -102,14 +102,6 @@ namespace VirtualTexture
         /// </summary>
         public Matrix4x4[] tiledMatrixs { get { return m_TiledMatrixs; } }
 
-        private struct DrawPageInfo
-        {
-            public Rect rect;
-            public int x;
-            public int y;
-            public int mip;
-        }
-
         public VirtualTexture2D(int tileSize, int tilingCount, VirtualTextureFormat[] formats, int pageSize, int maxLevel)
         {
             m_RequestPageJob = new RequestPageDataJob();
@@ -144,6 +136,24 @@ namespace VirtualTexture
         public Matrix4x4 GetMatrix(int tile)
         {
             return m_TileTexture.GetMatrix(tile);
+        }
+
+        public Matrix4x4 GetLookupMatrix(Page page)
+        {
+            var rect = page.GetRect();
+            var table = m_PageTable.pageLevelTable[page.mipLevel];
+            var offset = table.pageOffset * table.perCellSize;
+            var lb = rect.position - offset;
+
+            while (lb.x < 0) lb.x += pageSize;
+            while (lb.y < 0) lb.y += pageSize;
+
+            var tileRect = new Rect(lb.x, lb.y, rect.width, rect.height);
+
+            var size = tileRect.width / pageSize;
+            var position = new Vector3(tileRect.x / pageSize, tileRect.y / pageSize);
+
+            return VirtualShadowMapsUtilities.GetTextureScaleAndBiasMatrix(position, new Vector3(size, size, size));
         }
 
         /// <summary>
@@ -312,22 +322,10 @@ namespace VirtualTexture
                 for (int i = 0; i < m_ActiveTiles.Count; i++)
                 {
                     var page = m_ActiveTiles[i];
-                    var rect = page.GetRect();
-                    var table = m_PageTable.pageLevelTable[page.mipLevel];
-                    var offset = table.pageOffset * table.perCellSize;
-                    var lb = rect.position - offset;
+                    var pageIndex = m_TileTexture.IdToPos(page.payload.tileIndex);
 
-                    while (lb.x < 0) lb.x += pageSize;
-                    while (lb.y < 0) lb.y += pageSize;
-
-                    var tileRect = new Rect(lb.x, lb.y, rect.width, rect.height);
-                    var tileIndex = m_TileTexture.IdToPos(page.payload.tileIndex);
-
-                    var size = tileRect.width / pageSize;
-                    var position = new Vector3(tileRect.x / pageSize, tileRect.y / pageSize);
-
-                    m_TiledIndex[i] = new Vector4(tileIndex.x, tileIndex.y, page.mipLevel, 1 << page.mipLevel);
-                    m_TiledMatrixs[i] = Matrix4x4.TRS(position, Quaternion.identity, new Vector3(size, size, size));
+                    m_TiledIndex[i] = new Vector4(pageIndex.x, pageIndex.y, page.mipLevel, 1 << page.mipLevel);
+                    m_TiledMatrixs[i] = GetLookupMatrix(page);
                 }
             }
 
@@ -351,7 +349,7 @@ namespace VirtualTexture
                 m_TileTexture = null;
             }
 
-            if (m_LookupTexture != null) ;
+            if (m_LookupTexture != null)
             {
                 RenderTexture.ReleaseTemporary(m_LookupTexture);
                 m_LookupTexture = null;
