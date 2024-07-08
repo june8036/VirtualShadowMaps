@@ -120,7 +120,7 @@ namespace VirtualTexture
             m_TiledIndex = new Vector4[tilingCount * tilingCount];
             m_TiledMatrixs = new Matrix4x4[tilingCount * tilingCount];
 
-            m_LookupTexture = new RenderTexture(pageSize, pageSize, 16, RenderTextureFormat.ARGBHalf);
+            m_LookupTexture = RenderTexture.GetTemporary(pageSize, pageSize, 16, RenderTextureFormat.ARGBHalf);
             m_LookupTexture.name = "LookupTexture";
             m_LookupTexture.filterMode = FilterMode.Point;
             m_LookupTexture.wrapMode = TextureWrapMode.Clamp;
@@ -338,21 +338,27 @@ namespace VirtualTexture
 
         public void Clear()
         {
-            m_PageTable?.InvalidatePages();
-            m_RequestPageJob?.Clear();
-            m_TileTexture?.Clear();
+            m_PageTable.InvalidatePages();
+            m_RequestPageJob.Clear();
+            m_TileTexture.Clear();
         }
 
         public void Dispose()
         {
-            m_TileTexture?.Dispose();
-            m_TileTexture = null;
+            if (m_TileTexture != null)
+            {
+                m_TileTexture.Dispose();
+                m_TileTexture = null;
+            }
 
-            m_LookupTexture?.Release();
-            m_LookupTexture = null;
+            if (m_LookupTexture != null) ;
+            {
+                RenderTexture.ReleaseTemporary(m_LookupTexture);
+                m_LookupTexture = null;
+            }
 
-            m_RequestPageJob?.Clear();
-            m_PageTable?.InvalidatePages();
+            m_RequestPageJob.Clear();
+            m_PageTable.InvalidatePages();
         }
     }
 }

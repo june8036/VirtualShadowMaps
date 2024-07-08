@@ -172,9 +172,9 @@ namespace VirtualTexture
             m_Light = GetComponent<Light>();
             m_LightTransform = m_Light.transform;
 
+#if UNITY_EDITOR
             InitShadowCamera();
 
-#if UNITY_EDITOR
             foreach (var cam in SceneView.GetAllSceneCameras())
             {
                 if (cam.cameraType == CameraType.SceneView)
@@ -266,6 +266,8 @@ namespace VirtualTexture
                 m_Camera = null;
                 m_CameraTransform = null;
             }
+
+            DestroyCameraTexture();
         }
 
         public Camera GetCamera()
@@ -283,7 +285,7 @@ namespace VirtualTexture
                 if (m_CameraTexture != null)
                     m_CameraTexture.Release();
 
-                m_CameraTexture = new RenderTexture(maxResolution.ToInt(), maxResolution.ToInt(), 16, format);
+                m_CameraTexture = RenderTexture.GetTemporary(maxResolution.ToInt(), maxResolution.ToInt(), 16, format);
                 m_CameraTexture.name = "StaticShadowMap";
                 m_CameraTexture.useMipMap = false;
                 m_CameraTexture.autoGenerateMips = false;
@@ -296,14 +298,12 @@ namespace VirtualTexture
 
         public void DestroyCameraTexture()
         {
-            if (m_CameraTexture)
+            if (m_CameraTexture != null)
             {
                 if (m_Camera != null)
                     m_Camera.targetTexture = null;
 
-                m_CameraTexture.Release();
-                DestroyImmediate(m_CameraTexture);
-
+                RenderTexture.ReleaseTemporary(m_CameraTexture);
                 m_CameraTexture = null;
             }
         }

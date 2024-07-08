@@ -56,7 +56,7 @@ namespace VirtualTexture
             m_WorldBounds = virtualShadowMaps.CalculateBoundingBox();
             m_VirtualShadowMaps = virtualShadowMaps;
 
-            m_StaticShadowMap = new RenderTexture(virtualShadowMaps.maxResolution.ToInt(), virtualShadowMaps.maxResolution.ToInt(), 16, RenderTextureFormat.RGHalf);
+            m_StaticShadowMap = RenderTexture.GetTemporary(virtualShadowMaps.maxResolution.ToInt(), virtualShadowMaps.maxResolution.ToInt(), 16, RenderTextureFormat.RGHalf);
             m_StaticShadowMap.name = "StaticShadowMap";
             m_StaticShadowMap.useMipMap = false;
             m_StaticShadowMap.autoGenerateMips = false;
@@ -179,12 +179,12 @@ namespace VirtualTexture
 
         public void Dispose()
         {
+            if (m_Camera != null)
+                m_Camera.targetTexture = null;
+
             if (m_StaticShadowMap != null)
             {
-                if (m_Camera != null)
-                    m_Camera.targetTexture = null;
-
-                m_StaticShadowMap.Release();
+                RenderTexture.ReleaseTemporary(m_StaticShadowMap);
                 m_StaticShadowMap = null;
             }
         }

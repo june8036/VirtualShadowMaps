@@ -191,14 +191,23 @@ namespace VirtualTexture
             VirtualShadowManager.instance.UnregisterCamera(this);
             RenderPipelineManager.beginCameraRendering -= OnBeginCameraRendering;
 
-            this.m_CommandBuffer?.Release();
-            this.m_CommandBuffer = null;
+            if (this.m_CommandBuffer != null)
+            {
+                this.m_CommandBuffer.Release();
+                this.m_CommandBuffer = null;
+            }
 
-            this.m_CameraCommandBuffer?.Release();
-            this.m_CameraCommandBuffer = null;
+            if (this.m_CameraCommandBuffer != null)
+            {
+                this.m_CameraCommandBuffer.Release();
+                this.m_CameraCommandBuffer = null;
+            }
 
-            this.m_LightProjecionMatrixBuffer?.Release();
-            this.m_LightProjecionMatrixBuffer = null;
+            if (this.m_LightProjecionMatrixBuffer != null)
+            {
+                this.m_LightProjecionMatrixBuffer.Release();
+                this.m_LightProjecionMatrixBuffer = null;
+            }
 
             this.DestroyVirtualShadowMaps();
         }

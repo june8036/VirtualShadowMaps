@@ -59,7 +59,7 @@ namespace VirtualTexture
 
             for (int i = 0; i < m_TileFormat.Length; i++)
             {
-                var texture = new RenderTexture(this.textireSize, this.textireSize, 16, m_TileFormat[i].format, m_TileFormat[i].readWrite);
+                var texture = RenderTexture.GetTemporary(this.textireSize, this.textireSize, 16, m_TileFormat[i].format, m_TileFormat[i].readWrite);
                 texture.name = "TileTexture" + i;
                 texture.useMipMap = false;
                 texture.autoGenerateMips = false;
@@ -135,16 +135,16 @@ namespace VirtualTexture
             m_TilePool.Clear();
         }
 
-		public void Dispose()
+        public void Dispose()
         {
             for (int i = 0; i < m_TileTextures.Length; i++)
             {
                 if (m_TileTextures[i] != null)
                 {
-                    m_TileTextures[i].Release();
+                    RenderTexture.ReleaseTemporary(m_TileTextures[i]);
                     m_TileTextures[i] = null;
                 }
             }
         }
-	}
+    }
 }
