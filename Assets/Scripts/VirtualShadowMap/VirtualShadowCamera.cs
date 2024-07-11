@@ -499,7 +499,9 @@ namespace VirtualTexture
                 var distanceShadowMask = QualitySettings.shadowmaskMode == ShadowmaskMode.DistanceShadowmask ? true : false;
                 var regionRange = new Rect(lightSpaceBounds.min.x, lightSpaceBounds.min.y, lightSpaceBounds.size.x, lightSpaceBounds.size.y);
                 var worldToLocalMatrix = m_VirtualShadowMaps.shadowData ? m_VirtualShadowMaps.shadowData.worldToLocalMatrix : m_VirtualShadowMaps.GetLightTransform().worldToLocalMatrix;
-                var softness = m_VirtualShadowMaps.softnesss / m_VirtualTexture.textireSize * (1 << m_VirtualTexture.maxPageLevel);
+                var softness = m_VirtualShadowMaps.softnesss * (1 << m_VirtualTexture.maxPageLevel);
+                var softnessNear = m_VirtualShadowMaps.softnessNear * softness;
+                var softnessFar = m_VirtualShadowMaps.softnessFar * softness;
 
                 m_CameraCommandBuffer.Clear();
                 m_CameraCommandBuffer.SetGlobalMatrix(ShaderConstants._VirtualShadowLightMatrix, worldToLocalMatrix);
@@ -508,7 +510,7 @@ namespace VirtualTexture
                 m_CameraCommandBuffer.SetGlobalVector(ShaderConstants._VirtualShadowPageParams, new Vector4(m_VirtualTexture.pageSize, 1.0f / m_VirtualTexture.pageSize, m_VirtualTexture.maxPageLevel, 0));
                 m_CameraCommandBuffer.SetGlobalVector(ShaderConstants._VirtualShadowTileParams, new Vector4(m_VirtualTexture.tileSize, m_VirtualTexture.tilingCount, m_VirtualTexture.textireSize, 0));
                 m_CameraCommandBuffer.SetGlobalVector(ShaderConstants._VirtualShadowFeedbackParams, new Vector4(m_VirtualTexture.pageSize, m_VirtualTexture.pageSize * m_VirtualTexture.tileSize * m_RegionChangeScale.ToFloat(), m_VirtualTexture.maxPageLevel, 0));
-                m_CameraCommandBuffer.SetGlobalVector(ShaderConstants._VirtualShadowPcssParams, new Vector4(softness, m_VirtualShadowMaps.softnessNear, m_VirtualShadowMaps.softnessFar, 0));
+                m_CameraCommandBuffer.SetGlobalVector(ShaderConstants._VirtualShadowPcssParams, new Vector4(softness, softnessNear, softnessFar, 0));
 
                 m_CameraCommandBuffer.SetGlobalTexture(ShaderConstants._VirtualShadowTileTexture, m_VirtualTexture.GetTexture(0));
                 m_CameraCommandBuffer.SetGlobalTexture(ShaderConstants._VirtualShadowLookupTexture, m_VirtualTexture.GetLookupTexture());
