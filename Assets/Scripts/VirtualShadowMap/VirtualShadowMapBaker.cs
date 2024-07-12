@@ -101,14 +101,14 @@ namespace VirtualTexture
 
             var obliqueBounds = VirtualShadowMapsUtilities.CalculateBoundingBox(m_Renderers, m_Camera);
             var obliquePosition = new Vector3(0, obliqueBounds.max.y + clipOffset, 0);
-            var obliquePosition2 = new Vector3(0, obliqueBounds.min.y, 0);
-            var obliqueDistance = VirtualShadowMapsUtilities.CameraSpaceDistance(obliquePosition, Vector3.up, cellPos, lightTransform.forward);
+            var obliqueSlope = Vector3.Dot(Vector3.up, -lightTransform.forward);
+            var obliqueDistance = (cellPos.y - obliqueBounds.max.y) / obliqueSlope;
 
             m_Camera.transform.localPosition = boundsInLightSpaceLocalPosition + lightTransform.worldToLocalMatrix.MultiplyVector(lightTransform.forward) * obliqueDistance;
             m_Camera.aspect = 1.0f;
             m_Camera.orthographicSize = boundsInLightSpaceOrthographicSize;
             m_Camera.nearClipPlane = clipOffset;
-            m_Camera.farClipPlane = clipOffset + VirtualShadowMapsUtilities.CameraSpaceDistance(obliquePosition2, Vector3.up, m_Camera.transform.position, lightTransform.forward);
+            m_Camera.farClipPlane = clipOffset + obliqueBounds.max.y / obliqueSlope;
             m_Camera.projectionMatrix = m_Camera.CalculateObliqueMatrix(VirtualShadowMapsUtilities.CameraSpacePlane(m_Camera, obliquePosition, Vector3.up, -1.0f));
 
             RenderTexture savedRT = RenderTexture.active;
