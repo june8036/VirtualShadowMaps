@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Rendering;
 
 namespace VirtualTexture
 {
@@ -96,24 +95,6 @@ namespace VirtualTexture
             Vector3 cpos = m.MultiplyPoint(pos);
             Vector3 cnormal = m.MultiplyVector(normal).normalized * sideSign;
             return new Vector4(cnormal.x, cnormal.y, cnormal.z, -Vector3.Dot(cpos, cnormal));
-        }
-
-        public static void EnableShadowCaster(string tag = "StaticShadowCaster")
-        {
-            foreach (var renderer in GameObject.FindObjectsOfType<Renderer>())
-            {
-                if (renderer.gameObject.CompareTag(tag))
-                    renderer.shadowCastingMode = ShadowCastingMode.On;
-            }
-        }
-
-        public static void DisableShadowCaster(string tag = "StaticShadowCaster")
-        {
-            foreach (var renderer in GameObject.FindObjectsOfType<Renderer>())
-            {
-                if (renderer.gameObject.CompareTag(tag))
-                    renderer.shadowCastingMode = ShadowCastingMode.Off;
-            }
         }
 
         public static float CalculateBiasScale(float orthographicSize, int tileSize)

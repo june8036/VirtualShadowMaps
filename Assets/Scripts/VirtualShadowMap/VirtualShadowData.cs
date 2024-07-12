@@ -303,12 +303,6 @@ namespace VirtualTexture
 
         public void SaveAs(string path, string name = "VirtualShadowData.asset")
         {
-            foreach (var key in this.texAssets.Keys)
-            {
-                var assetPath = texAssets[key];
-                texAssets[key] = AssetDatabase.AssetPathToGUID(assetPath);
-            }
-
             AssetDatabase.CreateAsset(this, Path.Join(path, name));
             AssetDatabase.SaveAssets();
         }

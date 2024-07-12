@@ -60,6 +60,11 @@ namespace VirtualTexture
         public Material drawLookupMaterial;
 
         /// <summary>
+        /// 计算最小最大的深度信息
+        /// </summary>
+        public ComputeShader minMaxDpethCompute;
+
+        /// <summary>
         /// 覆盖区域大小.
         /// </summary>
         [Space(10)]
@@ -416,12 +421,17 @@ namespace VirtualTexture
             this.maxResolution = ShadowResolution._1024;
             this.bias = 0.05f;
             this.normalBias = 0.4f;
-
             this.shadowData = null;
 
-            this.castMaterial = null;
-            this.drawTileMaterial = null;
-            this.drawLookupMaterial = null;
+            var castMaterialPath = AssetDatabase.GUIDToAssetPath("3de651371e844a740acfc6662403e39d");
+            var drawTileMaterialPath = AssetDatabase.GUIDToAssetPath("e21bfd4f15c8c984db63c19afcbfbf14");
+            var drawLookupMaterialPath = AssetDatabase.GUIDToAssetPath("e4fe469a756b64248b416a5c9091c426");
+            var minMaxDepthPath = AssetDatabase.GUIDToAssetPath("329d26da45b19d245a3024f2ca7848cc");
+
+            this.castMaterial = AssetDatabase.LoadAssetAtPath<Material>(castMaterialPath);
+            this.drawTileMaterial = AssetDatabase.LoadAssetAtPath<Material>(drawTileMaterialPath);
+            this.drawLookupMaterial = AssetDatabase.LoadAssetAtPath<Material>(drawLookupMaterialPath);
+            this.minMaxDpethCompute = AssetDatabase.LoadAssetAtPath<ComputeShader>(minMaxDepthPath);
 
             this.CalculateRegionBox();
 
@@ -431,15 +441,27 @@ namespace VirtualTexture
         public void OnValidate()
         {
             if (this.castMaterial == null)
-                this.castMaterial = new Material(Shader.Find("Hidden/StaticShadowMap/ShadowCaster"));
+            {
+                var castMaterialPath = AssetDatabase.GUIDToAssetPath("3de651371e844a740acfc6662403e39d");
+                this.castMaterial = AssetDatabase.LoadAssetAtPath<Material>(castMaterialPath);
+            }
 
             if (this.drawTileMaterial == null)
-                this.drawTileMaterial = new Material(Shader.Find("Hidden/Virtual Texture/Draw Depth Tile"));
+            {
+                var drawTileMaterialPath = AssetDatabase.GUIDToAssetPath("e21bfd4f15c8c984db63c19afcbfbf14");
+                this.drawTileMaterial = AssetDatabase.LoadAssetAtPath<Material>(drawTileMaterialPath);
+            }
 
             if (this.drawLookupMaterial == null)
             {
-                this.drawLookupMaterial = new Material(Shader.Find("Hidden/Virtual Texture/Draw Lookup"));
-                this.drawLookupMaterial.enableInstancing = true;
+                var drawLookupMaterialPath = AssetDatabase.GUIDToAssetPath("e4fe469a756b64248b416a5c9091c426");
+                this.drawLookupMaterial = AssetDatabase.LoadAssetAtPath<Material>(drawLookupMaterialPath);
+            }
+
+            if (this.minMaxDpethCompute == null)
+            {
+                var minMaxDepthPath = AssetDatabase.GUIDToAssetPath("329d26da45b19d245a3024f2ca7848cc");
+                this.minMaxDpethCompute = AssetDatabase.LoadAssetAtPath<ComputeShader>(minMaxDepthPath);
             }
         }
 

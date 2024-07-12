@@ -373,7 +373,9 @@ namespace VirtualTexture
                             var rect = new Rect(thisPos.x, thisPos.y, cellSize, cellSize);
                             if (rect.Overlaps(lightSpaceCameraRect))
                             {
-                                m_VirtualTexture.LoadPage(x, y, level);
+                                var key = m_VirtualShadowMaps.shadowData.GetTexAsset(new RequestPageData(x, y, level));
+                                if (key != null)
+                                    m_VirtualTexture.LoadPage(x, y, level);
                             }
                             else
                             {

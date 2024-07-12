@@ -9,52 +9,66 @@ namespace VirtualTexture
     public sealed class VirtualShadowMapBaker : IDisposable
     {
         /// <summary>
-        /// ¹âÔ´³¯ÏòµÄÏà»ú
+        /// å…‰æºæœå‘çš„ç›¸æœº
         /// </summary>
         private Camera m_Camera;
 
         /// <summary>
-        /// äÖÈ¾µÄ¾²Ì¬ÎïÌå
+        /// æ¸²æŸ“çš„é™æ€ç‰©ä½“
         /// </summary>
         private List<Renderer> m_Renderers;
 
         /// <summary>
-        /// Í¶Ó°×ÅÉ«Æ÷
+        /// æŠ•å½±ç€è‰²å™¨
         /// </summary>
         private Material m_Material;
 
         /// <summary>
-        /// ÊÀ½ç°üÎ§Ìå
+        /// æŠ•å½±ç€è‰²å™¨
+        /// </summary>
+        private ComputeShader m_MinMaxDepthCompute;
+
+        /// <summary>
+        /// æŠ•å½±ç€è‰²å™¨
+        /// </summary>
+        private ComputeBuffer m_MinMaxDepthBuffer;
+
+        /// <summary>
+        /// ä¸–ç•ŒåŒ…å›´ä½“
         /// </summary>
         private Bounds m_WorldBounds;
 
         /// <summary>
-        /// ºæ±ºĞèÒªµÄÊı¾İ
+        /// çƒ˜ç„™éœ€è¦çš„æ•°æ®
         /// </summary>
         private VirtualShadowMaps m_VirtualShadowMaps;
 
         /// <summary>
-        /// äÖÈ¾µ¥¸öShadowMapĞèÒªµÄÎÆÀí
+        /// æ¸²æŸ“å•ä¸ªShadowMapéœ€è¦çš„çº¹ç†
         /// </summary>
-		private RenderTexture m_StaticShadowMap;
+        private RenderTexture m_StaticShadowMap;
 
         /// <summary>
-        /// äÖÈ¾µ¥¸öShadowMapĞèÒªµÄÍ¶Ó°¾ØÕó
+        /// æ¸²æŸ“å•ä¸ªShadowMapéœ€è¦çš„æŠ•å½±çŸ©é˜µ
         /// </summary>
         public Matrix4x4 lightProjecionMatrix;
 
         /// <summary>
-        /// äÖÈ¾µ¥¸öShadowMapĞèÒªµÄÎÆÀí
+        /// æ¸²æŸ“å•ä¸ªShadowMapéœ€è¦çš„çº¹ç†
         /// </summary>
-		public RenderTexture shadowMap { get => m_StaticShadowMap; }
+        public RenderTexture shadowMap { get => m_StaticShadowMap; }
 
         public VirtualShadowMapBaker(VirtualShadowMaps virtualShadowMaps)
         {
             m_Camera = virtualShadowMaps.GetCamera();
             m_Renderers = virtualShadowMaps.GetRenderers();
-            m_Material = virtualShadowMaps.castMaterial;
             m_WorldBounds = virtualShadowMaps.CalculateBoundingBox();
+            m_Material = virtualShadowMaps.castMaterial;
+            m_MinMaxDepthCompute = virtualShadowMaps.minMaxDpethCompute;
             m_VirtualShadowMaps = virtualShadowMaps;
+
+            m_MinMaxDepthBuffer = new ComputeBuffer(2, sizeof(int));
+            m_MinMaxDepthBuffer.SetData(new int[2] { 10000, 0});
 
             m_StaticShadowMap = RenderTexture.GetTemporary(virtualShadowMaps.maxResolution.ToInt(), virtualShadowMaps.maxResolution.ToInt(), 16, RenderTextureFormat.RGHalf);
             m_StaticShadowMap.name = "StaticShadowMap";
@@ -99,17 +113,52 @@ namespace VirtualTexture
             m_Camera.farClipPlane = clipOffset + lightSpaceBounds.size.z;
             m_Camera.ResetProjectionMatrix();
 
-            var obliqueBounds = VirtualShadowMapsUtilities.CalculateBoundingBox(m_Renderers, m_Camera);
-            var obliquePosition = new Vector3(0, obliqueBounds.max.y + clipOffset, 0);
+            this.Render(m_Material, 1);
+
+            var minMaxDepth = new int[2];
+            minMaxDepth[0] = Mathf.CeilToInt(m_WorldBounds.max.y);
+            minMaxDepth[1] = Mathf.CeilToInt(m_WorldBounds.min.y);
+
+            m_MinMaxDepthBuffer.SetData(minMaxDepth);
+
+            m_MinMaxDepthCompute.SetInt("width", m_StaticShadowMap.width);
+            m_MinMaxDepthCompute.SetInt("height", m_StaticShadowMap.height);
+            m_MinMaxDepthCompute.SetTexture(0, "depthMapRaw", m_StaticShadowMap);
+            m_MinMaxDepthCompute.SetBuffer(0, "minMaxDepthBuffer", m_MinMaxDepthBuffer);
+            m_MinMaxDepthCompute.Dispatch(0, Mathf.CeilToInt(m_StaticShadowMap.width / 8.0f), Mathf.CeilToInt(m_StaticShadowMap.height / 8.0f), 1);
+
+            m_MinMaxDepthBuffer.GetData(minMaxDepth);
+
+            if (minMaxDepth[0] == minMaxDepth[1])
+            {
+                var bounds = VirtualShadowMapsUtilities.CalculateBoundingBox(m_Renderers, m_Camera);
+                minMaxDepth[0] = Mathf.CeilToInt(bounds.min.y);
+                minMaxDepth[1] = Mathf.CeilToInt(bounds.max.y);
+            }
+
+            var obliquePosition = new Vector3(0, minMaxDepth[1] + clipOffset, 0);
             var obliqueSlope = Vector3.Dot(Vector3.up, -lightTransform.forward);
-            var obliqueDistance = (cellPos.y - obliqueBounds.max.y) / obliqueSlope;
+            var obliqueDistance = (cellPos.y - minMaxDepth[1]) / obliqueSlope;
 
             m_Camera.transform.localPosition = boundsInLightSpaceLocalPosition + lightTransform.worldToLocalMatrix.MultiplyVector(lightTransform.forward) * obliqueDistance;
             m_Camera.aspect = 1.0f;
             m_Camera.orthographicSize = boundsInLightSpaceOrthographicSize;
             m_Camera.nearClipPlane = clipOffset;
-            m_Camera.farClipPlane = clipOffset + obliqueBounds.max.y / obliqueSlope;
+            m_Camera.farClipPlane = clipOffset + (minMaxDepth[1] - minMaxDepth[0]) / obliqueSlope;
             m_Camera.projectionMatrix = m_Camera.CalculateObliqueMatrix(VirtualShadowMapsUtilities.CameraSpacePlane(m_Camera, obliquePosition, Vector3.up, -1.0f));
+
+            this.RenderShadowMap();
+
+            var projection = GL.GetGPUProjectionMatrix(m_Camera.projectionMatrix, false);
+            lightProjecionMatrix = VirtualShadowMapsUtilities.GetWorldToShadowMapSpaceMatrix(projection, m_Camera.worldToCameraMatrix);
+
+            return m_StaticShadowMap;
+        }
+
+
+        private void Render(Material material, int pass)
+        {
+            Debug.Assert(material != null);
 
             RenderTexture savedRT = RenderTexture.active;
 
@@ -123,30 +172,56 @@ namespace VirtualTexture
 
             foreach (var it in m_Renderers)
             {
-                if (GeometryUtility.TestPlanesAABB(planes, it.bounds))
-                {
-                    var pass = it.sharedMaterial.FindPass("VirtualShadowCaster");
-                    if (pass >= 0)
-                    {
-                        it.sharedMaterial.SetPass(pass);
-                    }
-                    else
-                    {
-                        m_Material.CopyPropertiesFromMaterial(it.sharedMaterial);
-                        m_Material.SetPass(0);
-                    }
+                if (!GeometryUtility.TestPlanesAABB(planes, it.bounds))
+                    continue;
 
-                    if (it.TryGetComponent<MeshFilter>(out var meshFilter))
-                        Graphics.DrawMeshNow(meshFilter.sharedMesh, it.localToWorldMatrix);
+                if (it.TryGetComponent<MeshFilter>(out var meshFilter))
+                {
+                    material.CopyPropertiesFromMaterial(it.sharedMaterial);
+                    material.SetPass(pass);
+
+                    Graphics.DrawMeshNow(meshFilter.sharedMesh, it.localToWorldMatrix);
                 }
             }
 
             Graphics.SetRenderTarget(savedRT);
+        }
 
-            var projection = GL.GetGPUProjectionMatrix(m_Camera.projectionMatrix, false);
-            lightProjecionMatrix = VirtualShadowMapsUtilities.GetWorldToShadowMapSpaceMatrix(projection, m_Camera.worldToCameraMatrix);
+        private void RenderShadowMap()
+        {
+            RenderTexture savedRT = RenderTexture.active;
 
-            return m_StaticShadowMap;
+            Graphics.SetRenderTarget(m_StaticShadowMap);
+            GL.Clear(true, true, Color.black);
+            GL.LoadIdentity();
+            GL.modelview = m_Camera.worldToCameraMatrix;
+            GL.LoadProjectionMatrix(m_Camera.projectionMatrix);
+
+            var planes = GeometryUtility.CalculateFrustumPlanes(m_Camera);
+
+            foreach (var it in m_Renderers)
+            {
+                if (!GeometryUtility.TestPlanesAABB(planes, it.bounds))
+                    continue;
+
+                var customPass = it.sharedMaterial.FindPass("VirtualShadowCaster");
+                if (customPass >= 0)
+                {
+                    it.sharedMaterial.SetPass(customPass);
+                }
+                else
+                {
+                    m_Material.CopyPropertiesFromMaterial(it.sharedMaterial);
+                    m_Material.SetPass(0);
+                }
+
+                if (it.TryGetComponent<MeshFilter>(out var meshFilter))
+                {
+                    Graphics.DrawMeshNow(meshFilter.sharedMesh, it.localToWorldMatrix);
+                }
+            }
+
+            Graphics.SetRenderTarget(savedRT);
         }
 
         public bool SaveRenderTexture(string filePath)

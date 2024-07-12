@@ -1,43 +1,19 @@
 #pragma kernel CSMain
 
-Texture2D<float> depthMapRaw;
-RWTexture2D<float> depthMap;
-RWStructuredBuffer<float2> minMaxDepthBuffer;
+int width;
+int height;
 
-[numthreads(16,16,1)]
-void CSMain(uint3 id : SV_DispatchThreadID)
+Texture2D<half2> depthMapRaw;
+RWStructuredBuffer<int> minMaxDepthBuffer;
+
+[numthreads(8,8,1)]
+void CSMain(int3 id : SV_DispatchThreadID)
 {
-	int rectWidth = 64;
-
-	float minD = 1;
-	float maxD = 0;
-
-	for (int i = 0; i < rectWidth; i++)
+	if (id.x < width && id.y < height)
 	{
-		for (int j = 0; j < rectWidth; j++)
-		{
-			uint2 index = id.xy * rectWidth + uint2(i, j);
-			float d = depthMapRaw[index];
-			minD = min(minD, d);
-			maxD = max(maxD, d);
-		}
-	}
+		int value = ceil(depthMapRaw[id.xy].x);
 
-	if (minD == maxD)
-	{
-		minD = 0;
-		maxD = 1;
+		InterlockedMin(minMaxDepthBuffer[0], value);
+		InterlockedMax(minMaxDepthBuffer[1], value);
 	}
-	
-	for (int i = 0; i < rectWidth; i++)
-	{
-		for (int j = 0; j < rectWidth; j++)
-		{
-			uint2 index = id.xy * rectWidth + uint2(i, j);
-			float d = depthMapRaw[index];
-			depthMap[index] = (d - minD) / (maxD - minD);
-		}
-	}
-
-	minMaxDepthBuffer[id.y * 16 + id.x] = float2(minD, maxD);
 }
