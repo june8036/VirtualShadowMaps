@@ -136,6 +136,7 @@ namespace VirtualTexture
                 minMaxDepth[1] = Mathf.CeilToInt(bounds.max.y);
             }
 
+            var obliqueHeight = minMaxDepth[1] - minMaxDepth[0];
             var obliquePosition = new Vector3(0, minMaxDepth[1] + clipOffset, 0);
             var obliqueSlope = Vector3.Dot(Vector3.up, -lightTransform.forward);
             var obliqueDistance = (cellPos.y - minMaxDepth[1]) / obliqueSlope;
@@ -144,7 +145,7 @@ namespace VirtualTexture
             m_Camera.aspect = 1.0f;
             m_Camera.orthographicSize = boundsInLightSpaceOrthographicSize;
             m_Camera.nearClipPlane = clipOffset;
-            m_Camera.farClipPlane = clipOffset + (minMaxDepth[1] - minMaxDepth[0]) / obliqueSlope;
+            m_Camera.farClipPlane = clipOffset + obliqueHeight / Mathf.Lerp(1.0f, obliqueSlope, obliqueHeight / m_Camera.orthographicSize);
             m_Camera.projectionMatrix = m_Camera.CalculateObliqueMatrix(VirtualShadowMapsUtilities.CameraSpacePlane(m_Camera, obliquePosition, Vector3.up, -1.0f));
 
             this.RenderShadowMap();

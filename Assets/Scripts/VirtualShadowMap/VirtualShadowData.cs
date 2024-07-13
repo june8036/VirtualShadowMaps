@@ -100,17 +100,10 @@ namespace VirtualTexture
         /// <summary>
         /// 查找纹理资源
         /// </summary>
-        public string GetTexAsset(RequestPageData request)
+        public string GetTexAsset(RequestPageData key)
         {
-            foreach (var pair in texAssets)
-            {
-                if (pair.Key.pageX == request.pageX &&
-                    pair.Key.pageY == request.pageY &&
-                    pair.Key.mipLevel == request.mipLevel)
-                {
-                    return pair.Value;
-                }
-            }
+            if (texAssets.TryGetValue(key, out var value))
+                return value;
 
             return null;
         }
@@ -120,17 +113,7 @@ namespace VirtualTexture
         /// </summary>
         public string GetTexAsset(int x, int y, int mipLevel)
         {
-            foreach (var pair in texAssets)
-            {
-                if (pair.Key.pageX == x &&
-                    pair.Key.pageY == y &&
-                    pair.Key.mipLevel == mipLevel)
-                {
-                    return pair.Value;
-                }
-            }
-
-            return null;
+            return GetTexAsset(new RequestPageData(x, y, mipLevel));
         }
 
         /// <summary>
@@ -144,14 +127,10 @@ namespace VirtualTexture
         /// <summary>
         /// 获取纹理对应的投影矩阵
         /// </summary>
-        public Matrix4x4 GetMatrix(int x, int y, int mip)
+        public Matrix4x4 GetMatrix(RequestPageData request)
         {
-            foreach (var pair in lightProjections)
-            {
-                var req = pair.Key;
-                if (req.pageX == x && req.pageY == y && req.mipLevel == mip)
-                    return pair.Value;
-            }
+            if (lightProjections.TryGetValue(request, out var value))
+                return value;
 
             return Matrix4x4.identity;
         }
@@ -243,27 +222,12 @@ namespace VirtualTexture
             return sourceTex;
         }
 
-        private bool canSkipTile(Color[] colors, int x, int y, int count, int texWidth)
-        {
-            int emptyCount = 0;
-
-            for (int i = 0; i < count; i++)
-            {
-                for (int j = 0; j < count; j++)
-                {
-                    if (colors[(y * count + i) * texWidth + x * count + j].r == 0) emptyCount++;
-                }
-            }
-
-            return emptyCount * 100.0f / count / count > 99;
-        }
-
 #if UNITY_EDITOR
         public void SetupTextureImporter()
         {
             foreach (var it in this.texAssets)
             {
-                var textureImporter = TextureImporter.GetAtPath(it.Value) as TextureImporter;
+                var textureImporter = TextureImporter.GetAtPath(AssetDatabase.GUIDToAssetPath(it.Value)) as TextureImporter;
                 if (textureImporter != null)
                 {
                     textureImporter.textureType = TextureImporterType.SingleChannel;

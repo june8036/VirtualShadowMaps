@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 
 namespace VirtualTexture
 {
@@ -7,7 +6,7 @@ namespace VirtualTexture
 	/// 渲染请求类.
 	/// </summary>
 	[Serializable]
-	public struct RequestPageData : IEqualityComparer<RequestPageData>
+	public struct RequestPageData : IEquatable<RequestPageData>
     {
 		/// <summary>
 		/// 页表X坐标
@@ -39,18 +38,14 @@ namespace VirtualTexture
 			mipLevel = mip;
 		}
 
-        public bool Equals(RequestPageData lhs, RequestPageData rhs)
+        public override int GetHashCode()
         {
-			return lhs.pageX == rhs.pageX && lhs.pageY == rhs.pageY && lhs.mipLevel == rhs.mipLevel;
+            return (pageY * short.MaxValue + pageX) * (1 + mipLevel);
         }
 
-        public int GetHashCode(RequestPageData obj)
+        public bool Equals(RequestPageData other)
         {
-            int hashCode = 17;
-            hashCode = hashCode * 23 + EqualityComparer<int>.Default.GetHashCode(this.pageX);
-            hashCode = hashCode * 23 + EqualityComparer<int>.Default.GetHashCode(this.pageY);
-            hashCode = hashCode * 23 + EqualityComparer<int>.Default.GetHashCode(this.mipLevel);
-			return hashCode;
+            return this.pageX == other.pageX && this.pageY == other.pageY && this.mipLevel == other.mipLevel;
         }
     }
 }

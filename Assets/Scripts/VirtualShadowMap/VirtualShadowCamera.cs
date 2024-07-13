@@ -373,9 +373,7 @@ namespace VirtualTexture
                             var rect = new Rect(thisPos.x, thisPos.y, cellSize, cellSize);
                             if (rect.Overlaps(lightSpaceCameraRect))
                             {
-                                var key = m_VirtualShadowMaps.shadowData.GetTexAsset(new RequestPageData(x, y, level));
-                                if (key != null)
-                                    m_VirtualTexture.LoadPage(x, y, level);
+                                m_VirtualTexture.LoadPage(x, y, level);
                             }
                             else
                             {
@@ -542,7 +540,7 @@ namespace VirtualTexture
 
         private bool OnBeginTileLoading(RequestPageData request, int tile, Texture2D texture)
         {
-            m_LightProjecionMatrixs[tile] = m_VirtualShadowMaps.shadowData.GetMatrix(request.pageX, request.pageY, request.mipLevel);
+            m_LightProjecionMatrixs[tile] = m_VirtualShadowMaps.shadowData.GetMatrix(request);
 
             m_CommandBuffer.Clear();
 
