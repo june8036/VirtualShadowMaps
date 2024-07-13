@@ -223,11 +223,8 @@ namespace VirtualTexture
         {
             foreach (var cam in SceneView.GetAllSceneCameras())
             {
-                if (cam.cameraType == CameraType.SceneView)
-                {
-                    if (cam.gameObject.TryGetComponent<VirtualShadowCamera>(out var virtualShadowCamera))
-                        virtualShadowCamera.ResetShadowMaps();
-                }
+                if (cam.TryGetComponent<VirtualShadowCamera>(out var virtualShadowCamera))
+                    virtualShadowCamera.ResetShadowMaps();
             }
         }
 #endif

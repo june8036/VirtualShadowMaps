@@ -223,48 +223,6 @@ namespace VirtualTexture
         }
 
 #if UNITY_EDITOR
-        public void SetupTextureImporter()
-        {
-            foreach (var it in this.texAssets)
-            {
-                var textureImporter = TextureImporter.GetAtPath(AssetDatabase.GUIDToAssetPath(it.Value)) as TextureImporter;
-                if (textureImporter != null)
-                {
-                    textureImporter.textureType = TextureImporterType.SingleChannel;
-                    textureImporter.textureShape = TextureImporterShape.Texture2D;
-                    textureImporter.textureCompression = TextureImporterCompression.Uncompressed;
-                    textureImporter.alphaSource = TextureImporterAlphaSource.None;
-                    textureImporter.sRGBTexture = false;
-                    textureImporter.ignorePngGamma = true;
-                    textureImporter.mipmapEnabled = false;
-                    textureImporter.filterMode = FilterMode.Point;
-                    textureImporter.wrapMode = TextureWrapMode.Clamp;
-
-                    var defaultSettings = textureImporter.GetDefaultPlatformTextureSettings();
-                    defaultSettings.format = TextureImporterFormat.R16;
-                    defaultSettings.textureCompression = TextureImporterCompression.Uncompressed;
-
-                    textureImporter.SetPlatformTextureSettings(defaultSettings);
-
-                    var standaloneSettings = textureImporter.GetPlatformTextureSettings("Standalone");
-                    standaloneSettings.overridden = true;
-                    standaloneSettings.format = TextureImporterFormat.R16;
-                    standaloneSettings.textureCompression = TextureImporterCompression.Uncompressed;
-
-                    textureImporter.SetPlatformTextureSettings(standaloneSettings);
-
-                    var androidSettings = textureImporter.GetPlatformTextureSettings("Android");
-                    androidSettings.overridden = true;
-                    androidSettings.format = TextureImporterFormat.R16;
-                    androidSettings.textureCompression = TextureImporterCompression.Uncompressed;
-
-                    textureImporter.SetPlatformTextureSettings(androidSettings);
-
-                    textureImporter.SaveAndReimport();
-                }
-            }
-        }
-
         public void SaveAs(string path, string name = "VirtualShadowData.asset")
         {
             AssetDatabase.CreateAsset(this, Path.Join(path, name));

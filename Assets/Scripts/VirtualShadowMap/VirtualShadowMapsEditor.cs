@@ -85,7 +85,6 @@ namespace VirtualTexture
             foreach (var it in texLightProjecionMatrix)
                 m_VirtualShadowData.SetMatrix(it.Key, it.Value);
 
-            m_VirtualShadowData.SetupTextureImporter();
             m_VirtualShadowData.SaveAs(Path.Join(fileroot, sceneName));
 
             m_VirtualShadowMaps.shadowData = m_VirtualShadowData;
