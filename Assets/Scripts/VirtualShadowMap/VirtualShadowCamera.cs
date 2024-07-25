@@ -176,6 +176,12 @@ namespace VirtualTexture
             m_LightProjecionMatrixs = VirtualShadowMaps.useStructuredBuffer ? new Matrix4x4[tilingCount * tilingCount] : new Matrix4x4[VirtualShadowMaps.maxUniformBufferSize];
             m_LightProjecionMatrixBuffer = VirtualShadowMaps.useStructuredBuffer ? new GraphicsBuffer(GraphicsBuffer.Target.Structured, m_LightProjecionMatrixs.Length, Marshal.SizeOf<Matrix4x4>()) : null;
 
+            for (int i = 0; i < m_LightProjecionMatrixs.Length; i++)
+                m_LightProjecionMatrixs[i] = Matrix4x4.identity;
+
+            if (m_LightProjecionMatrixBuffer != null)
+                m_LightProjecionMatrixBuffer.SetData(m_LightProjecionMatrixs);
+
             m_CommandBuffer = new CommandBuffer();
             m_CommandBuffer.name = "TileTexture.Render";
 
@@ -473,7 +479,16 @@ namespace VirtualTexture
             {
                 var req = m_VirtualTexture.FirstRequest();
                 if (req != null)
-                    this.ProcessRequest(req.Value, async);
+                {
+                    try
+                    {
+                        this.ProcessRequest(req.Value, async);
+                    }
+                    catch (Exception)
+                    {
+                        m_VirtualTexture.RemoveRequest(req.Value);
+                    }
+                }
             }
         }
 

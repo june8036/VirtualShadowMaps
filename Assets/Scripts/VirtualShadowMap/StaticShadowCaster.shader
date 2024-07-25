@@ -43,9 +43,15 @@
 			clip(MainTex.a - _Cutoff);
 
 		#if defined(SHADER_API_GLCORE) || defined(SHADER_API_GLES) || defined(SHADER_API_GLES3)
-			return 1 - (input.depth.z * 0.5f + 0.5f);
+			float shadowDepth = input.depth.z;
+			shadowDepth += 1.0f / 65535.f; // For R16_Depth;
+			shadowDepth += (abs(ddx(shadowDepth)) + abs(ddy(shadowDepth)));
+			return 1 - (shadowDepth * 0.5f + 0.5f);
 		#else
-			return input.depth.z;
+			float shadowDepth = input.depth.z;
+			shadowDepth -= 1.0f / 65535.f; // For R16_Depth;
+			shadowDepth -= (abs(ddx(shadowDepth)) + abs(ddy(shadowDepth)));
+			return shadowDepth;
 		#endif
 		}
 
@@ -62,6 +68,7 @@
 		{
 			ZTest Lequal ZWrite On
 			Cull Off
+			Offset 1, 1
 
 			Tags { "RenderType" = "DepthMap" }
 

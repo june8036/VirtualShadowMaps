@@ -103,7 +103,7 @@ namespace VirtualTexture
             var cellCenter = lightSpaceMin + lightSpaceAxisX * cellWidth * (x + 0.5f) + lightSpaceAxisY * cellHeight * (y + 0.5f);
             var cellPos = lightTransform.localToWorldMatrix.MultiplyPoint(cellCenter);
 
-            var boundsInLightSpaceOrthographicSize = Mathf.Max(cellWidth, cellHeight) * 0.5f + 5;
+            var boundsInLightSpaceOrthographicSize = Mathf.Max(cellWidth, cellHeight) * 0.5f + 4;
             var boundsInLightSpaceLocalPosition = new Vector3(cellCenter.x, cellCenter.y, cellCenter.z - clipOffset);
 
             m_Camera.transform.localPosition = boundsInLightSpaceLocalPosition;
@@ -139,13 +139,15 @@ namespace VirtualTexture
             var obliqueHeight = minMaxDepth[1] - minMaxDepth[0];
             var obliquePosition = new Vector3(0, minMaxDepth[1] + clipOffset, 0);
             var obliqueSlope = Vector3.Dot(Vector3.up, -lightTransform.forward);
+            var obliqueSine = Mathf.Sqrt(1 - obliqueSlope * obliqueSlope);
             var obliqueDistance = (cellPos.y - minMaxDepth[1]) / obliqueSlope;
+            var obliqueWeight = Mathf.Clamp01(boundsInLightSpaceOrthographicSize / (obliqueHeight + obliqueHeight * obliqueSine));
 
             m_Camera.transform.localPosition = boundsInLightSpaceLocalPosition + lightTransform.worldToLocalMatrix.MultiplyVector(lightTransform.forward) * obliqueDistance;
             m_Camera.aspect = 1.0f;
             m_Camera.orthographicSize = boundsInLightSpaceOrthographicSize;
             m_Camera.nearClipPlane = clipOffset;
-            m_Camera.farClipPlane = clipOffset + obliqueHeight / Mathf.Lerp(1.0f, obliqueSlope, obliqueHeight / m_Camera.orthographicSize);
+            m_Camera.farClipPlane = clipOffset + Mathf.Lerp(obliqueHeight / obliqueSlope, 1.0f, obliqueWeight);
             m_Camera.projectionMatrix = m_Camera.CalculateObliqueMatrix(VirtualShadowMapsUtilities.CameraSpacePlane(m_Camera, obliquePosition, Vector3.up, -1.0f));
 
             this.RenderShadowMap();
@@ -155,7 +157,6 @@ namespace VirtualTexture
 
             return m_StaticShadowMap;
         }
-
 
         private void Render(Material material, int pass)
         {

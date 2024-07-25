@@ -2,26 +2,26 @@
 
 namespace VirtualTexture
 {
-	/// <summary>
-	/// 渲染请求类.
-	/// </summary>
-	[Serializable]
-	public struct RequestPageData : IEquatable<RequestPageData>
+    /// <summary>
+    /// 渲染请求类.
+    /// </summary>
+    [Serializable]
+    public struct RequestPageData : IEquatable<RequestPageData>
     {
-		/// <summary>
-		/// 页表X坐标
-		/// </summary>
-		public int pageX;
+        /// <summary>
+        /// 页表X坐标
+        /// </summary>
+        public int pageX;
 
-		/// <summary>
-		/// 页表Y坐标
-		/// </summary>
-		public int pageY;
+        /// <summary>
+        /// 页表Y坐标
+        /// </summary>
+        public int pageY;
 
-		/// <summary>
-		/// mipmap等级
-		/// </summary>
-		public int mipLevel;
+        /// <summary>
+        /// mipmap等级
+        /// </summary>
+        public int mipLevel;
 
         /// <summary>
         /// 页表大小
@@ -32,11 +32,11 @@ namespace VirtualTexture
         /// 构造函数
         /// </summary>
         public RequestPageData(int x, int y, int mip)
-		{
-			pageX = x;
-			pageY = y;
-			mipLevel = mip;
-		}
+        {
+            pageX = x;
+            pageY = y;
+            mipLevel = mip;
+        }
 
         public override int GetHashCode()
         {
