@@ -166,7 +166,9 @@ namespace VirtualTexture
                      deviceType == GraphicsDeviceType.Direct3D12 ||
                      deviceType == GraphicsDeviceType.PlayStation4 ||
                      deviceType == GraphicsDeviceType.PlayStation5 ||
-                     deviceType == GraphicsDeviceType.XboxOne);
+                     deviceType == GraphicsDeviceType.XboxOne ||
+                     deviceType == GraphicsDeviceType.GameCoreXboxOne ||
+                     deviceType == GraphicsDeviceType.GameCoreXboxSeries);
             }
         }
 
@@ -218,13 +220,17 @@ namespace VirtualTexture
             DestroyCameraTexture();
         }
 
+
 #if UNITY_EDITOR
         public void Refresh()
         {
             foreach (var cam in SceneView.GetAllSceneCameras())
             {
-                if (cam.TryGetComponent<VirtualShadowCamera>(out var virtualShadowCamera))
-                    virtualShadowCamera.ResetShadowMaps();
+                if (cam.cameraType == CameraType.SceneView)
+                {
+                    if (cam.gameObject.TryGetComponent<VirtualShadowCamera>(out var virtualShadowCamera))
+                        virtualShadowCamera.ResetShadowMaps();
+                }
             }
         }
 #endif
@@ -334,22 +340,16 @@ namespace VirtualTexture
         {
             var camera = GetCamera();
             var renderers = new List<Renderer>();
+            var allRenderers = new List<Renderer>();
 
-            foreach (var renderer in GameObject.FindObjectsOfType<MeshRenderer>())
+            foreach (var lodGroup in GameObject.FindObjectsOfType<LODGroup>())
             {
-                if (renderer.gameObject.GetComponentInParent<LODGroup>())
-                    continue;
-
-                var layerTest = ((1 << renderer.gameObject.layer) & camera.cullingMask) > 0;
-                if (renderer.gameObject.isStatic && layerTest)
+                foreach (var lod in lodGroup.GetLODs())
                 {
-                    if (renderer.enabled)
+                    foreach (var renderer in lod.renderers)
                     {
-                        if (renderer.TryGetComponent<MeshFilter>(out var meshFilter))
-                        {
-                            if (meshFilter.sharedMesh != null && renderer.sharedMaterial != null)
-                                renderers.Add(renderer);
-                        }
+                        if (renderer != null)
+                            allRenderers.Add(renderer);
                     }
                 }
             }
@@ -364,12 +364,39 @@ namespace VirtualTexture
                         if (renderer == null)
                             continue;
 
+                        var isCastShadow = renderer.gameObject.isStatic;
+                        if (renderer.TryGetComponent<VirtualShadowCaster>(out var virtualShadowCaster))
+                            isCastShadow = virtualShadowCaster.castShadow;
+
                         var layerTest = ((1 << renderer.gameObject.layer) & camera.cullingMask) > 0;
-                        if (renderer.gameObject.isStatic && layerTest)
+                        if (isCastShadow && layerTest)
                         {
                             if (renderer.TryGetComponent<MeshFilter>(out var meshFilter))
                             {
                                 if (meshFilter.sharedMesh != null && renderer.sharedMaterial != null)
+                                    renderers.Add(renderer);
+                            }
+                        }
+                    }
+                }
+            }
+
+            foreach (var renderer in GameObject.FindObjectsOfType<MeshRenderer>())
+            {
+                var layerTest = ((1 << renderer.gameObject.layer) & camera.cullingMask) > 0;
+                if (renderer.enabled && layerTest)
+                {
+                    var isCastShadow = renderer.gameObject.isStatic;
+                    if (renderer.TryGetComponent<VirtualShadowCaster>(out var virtualShadowCaster))
+                        isCastShadow = virtualShadowCaster.castShadow;
+
+                    if (isCastShadow)
+                    {
+                        if (renderer.TryGetComponent<MeshFilter>(out var meshFilter))
+                        {
+                            if (meshFilter.sharedMesh != null && renderer.sharedMaterial != null)
+                            {
+                                if (!allRenderers.Contains(renderer))
                                     renderers.Add(renderer);
                             }
                         }

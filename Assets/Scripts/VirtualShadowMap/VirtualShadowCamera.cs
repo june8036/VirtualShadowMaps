@@ -169,18 +169,7 @@ namespace VirtualTexture
             m_VirtualShadowMapsKeywordFeature = GlobalKeyword.Create(m_VirtualShadowMapsKeyword);
             m_VirtualShadowMapsPcssKeywordFeature = GlobalKeyword.Create(m_VirtualShadowMapsPcssKeyword);
 
-            var tilingCount = Mathf.ClosestPowerOfTwo(Mathf.CeilToInt(Mathf.Sqrt(m_MaxTilePool)));
-
             m_PropertyBlock = new MaterialPropertyBlock();
-
-            m_LightProjecionMatrixs = VirtualShadowMaps.useStructuredBuffer ? new Matrix4x4[tilingCount * tilingCount] : new Matrix4x4[VirtualShadowMaps.maxUniformBufferSize];
-            m_LightProjecionMatrixBuffer = VirtualShadowMaps.useStructuredBuffer ? new GraphicsBuffer(GraphicsBuffer.Target.Structured, m_LightProjecionMatrixs.Length, Marshal.SizeOf<Matrix4x4>()) : null;
-
-            for (int i = 0; i < m_LightProjecionMatrixs.Length; i++)
-                m_LightProjecionMatrixs[i] = Matrix4x4.identity;
-
-            if (m_LightProjecionMatrixBuffer != null)
-                m_LightProjecionMatrixBuffer.SetData(m_LightProjecionMatrixs);
 
             m_CommandBuffer = new CommandBuffer();
             m_CommandBuffer.name = "TileTexture.Render";
@@ -275,8 +264,17 @@ namespace VirtualTexture
 
         private void CreateVirtualShadowMaps()
         {
-            var tilingCount = Mathf.ClosestPowerOfTwo(Mathf.CeilToInt(Mathf.Sqrt(m_MaxTilePool)));
+            var tilingCount = Mathf.RoundToInt(Mathf.Sqrt(m_MaxTilePool));
             var textureFormat = new VirtualTextureFormat[] { new VirtualTextureFormat(RenderTextureFormat.Shadowmap, FilterMode.Bilinear) };
+
+            m_LightProjecionMatrixs = VirtualShadowMaps.useStructuredBuffer ? new Matrix4x4[tilingCount * tilingCount] : new Matrix4x4[VirtualShadowMaps.maxUniformBufferSize];
+            m_LightProjecionMatrixBuffer = VirtualShadowMaps.useStructuredBuffer ? new GraphicsBuffer(GraphicsBuffer.Target.Structured, m_LightProjecionMatrixs.Length, Marshal.SizeOf<Matrix4x4>()) : null;
+
+            for (int i = 0; i < m_LightProjecionMatrixs.Length; i++)
+                m_LightProjecionMatrixs[i] = Matrix4x4.identity;
+
+            if (m_LightProjecionMatrixBuffer != null)
+                m_LightProjecionMatrixBuffer.SetData(m_LightProjecionMatrixs);
 
             if (m_VirtualShadowMaps.shadowData != null)
             {
@@ -301,6 +299,12 @@ namespace VirtualTexture
         {
             m_VirtualShadowMaps = null;
 
+            if (m_LightProjecionMatrixBuffer != null)
+            {
+                m_LightProjecionMatrixBuffer.Release();
+                m_LightProjecionMatrixBuffer = null;
+            }
+
             if (m_VirtualTexture != null)
             {
                 m_VirtualTexture.Dispose();
@@ -315,23 +319,28 @@ namespace VirtualTexture
                 m_VirtualShadowMaps.GetLightTransform().worldToLocalMatrix;
 
             m_Bounds = m_VirtualShadowMaps.shadowData != null ? m_VirtualShadowMaps.shadowData.bounds : m_VirtualShadowMaps.CalculateBoundingBox();
+
             m_BoundsInLightSpace = new Bounds[m_VirtualTexture.maxPageLevel + 1];
+            m_BoundsInLightSpace[m_VirtualTexture.maxPageLevel] = m_Bounds.CalclateFitScene(worldToLocalMatrix);
 
             for (var level = 0; level <= m_VirtualTexture.maxPageLevel; level++)
             {
+                var bounds = m_BoundsInLightSpace[m_VirtualTexture.maxPageLevel];
                 var perSize = 1 << (m_VirtualTexture.maxPageLevel - level);
 
-                var size = m_Bounds.size;
+                var size = bounds.size;
                 size.x /= perSize;
-                size.z /= perSize;
+                size.y /= perSize;
 
-                var bounds = new Bounds(m_Bounds.center, size);
-                m_BoundsInLightSpace[level] = bounds.CalclateFitScene(worldToLocalMatrix);
+                m_BoundsInLightSpace[level] = new Bounds(bounds.center, size);
             }
         }
 
         private void UpdatePage()
         {
+            if (m_VirtualTexture.GetRequestCount() > 0)
+                return;
+
             var worldToLocalMatrix = m_VirtualShadowMaps.shadowData ?
                 m_VirtualShadowMaps.shadowData.worldToLocalMatrix :
                 m_VirtualShadowMaps.GetLightTransform().worldToLocalMatrix;

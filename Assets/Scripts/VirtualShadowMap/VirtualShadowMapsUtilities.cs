@@ -100,7 +100,7 @@ namespace VirtualTexture
         public static float CalculateBiasScale(float orthographicSize, int tileSize)
         {
             float halfFrustumSize = orthographicSize;
-            float halfTexelResolution = halfFrustumSize / tileSize;
+            float halfTexelResolution = halfFrustumSize / (tileSize * 2);
 
             float biasScale = 10;
             biasScale *= halfTexelResolution;

@@ -259,6 +259,12 @@ namespace VirtualTexture
             if (m_Camera != null)
                 m_Camera.targetTexture = null;
 
+            if (m_MinMaxDepthBuffer != null)
+            {
+                m_MinMaxDepthBuffer.Dispose();
+                m_MinMaxDepthBuffer = null;
+            }
+
             if (m_StaticShadowMap != null)
             {
                 RenderTexture.ReleaseTemporary(m_StaticShadowMap);
